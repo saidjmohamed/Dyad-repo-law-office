@@ -29,7 +29,11 @@ export const getCases = async () => {
     throw new Error("لا يمكن جلب قائمة القضايا.");
   }
   
-  return data.map(d => ({...d, client_name: d.clients.full_name, clients: undefined }));
+  return data.map(d => ({
+    ...d, 
+    client_name: d.clients?.full_name || 'غير محدد', 
+    clients: undefined 
+  }));
 };
 
 export const createCase = async (caseData: CaseFormData) => {
@@ -46,7 +50,8 @@ export const createCase = async (caseData: CaseFormData) => {
 
   if (error) {
     console.error("Error creating case:", error);
-    throw new Error("لا يمكن إنشاء القضية.");
+    // Throw the actual database error message for better debugging
+    throw new Error(`فشل إنشاء القضية: ${error.message}`);
   }
 
   return data;
