@@ -31,11 +31,11 @@ const Login = () => {
           view="magic_link"
           localization={{
             variables: {
-              sign_in: {
-                email_label: 'البريد الإلكتروني',
+              magic_link: {
+                email_input_label: 'البريد الإلكتروني',
                 email_input_placeholder: 'your.email@example.com',
                 button_label: 'إرسال رابط الدخول',
-                magic_link_sent: 'تم إرسال رابط الدخول إلى بريدك الإلكتروني.',
+                confirmation_text: 'تم إرسال رابط الدخول إلى بريدك الإلكتروني.',
                 loading_button_label: 'جاري الإرسال ...'
               },
             },
