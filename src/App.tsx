@@ -13,6 +13,7 @@ import Cases from "./pages/cases/Cases";
 import CaseDetails from "./pages/cases/CaseDetails";
 import Hearings from "./pages/hearings/Hearings";
 import Tasks from "./pages/tasks/Tasks";
+import CalendarPage from "./pages/calendar/CalendarPage";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/cases/:caseId" element={<CaseDetails />} />
             <Route path="/hearings" element={<Hearings />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/calendar" element={<CalendarPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
