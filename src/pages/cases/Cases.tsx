@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { showSuccess, showError } from "@/utils/toast";
+import { Link } from "react-router-dom";
 
 type Case = {
   id: string;
@@ -150,7 +151,11 @@ const Cases = () => {
                 {filteredCases && filteredCases.length > 0 ? (
                   filteredCases.map((caseItem) => (
                     <TableRow key={caseItem.id}>
-                      <TableCell className="font-medium">{caseItem.case_number}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/cases/${caseItem.id}`} className="hover:underline text-primary">
+                          {caseItem.case_number}
+                        </Link>
+                      </TableCell>
                       <TableCell>{caseItem.client_name}</TableCell>
                       <TableCell>{caseItem.case_type}</TableCell>
                       <TableCell>{caseItem.court}</TableCell>

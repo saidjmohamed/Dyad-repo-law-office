@@ -36,6 +36,37 @@ export const getCases = async () => {
   }));
 };
 
+export const getCaseById = async (id: string) => {
+  const { data, error } = await supabase
+    .from("cases")
+    .select(`
+      *,
+      clients (*),
+      hearings (*),
+      tasks (*)
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching case details:", error);
+    throw new Error("لا يمكن جلب تفاصيل القضية.");
+  }
+
+  // Sort hearings by date
+  if (data.hearings) {
+    data.hearings.sort((a, b) => new Date(b.hearing_date).getTime() - new Date(a.hearing_date).getTime());
+  }
+
+  // Sort tasks by creation date
+  if (data.tasks) {
+    data.tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+
+  return data;
+};
+
+
 export const createCase = async (caseData: CaseFormData) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول");
