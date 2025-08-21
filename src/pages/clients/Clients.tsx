@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClients, deleteClient } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
 import { ClientSheet } from "./ClientSheet";
 import {
   Card,
@@ -38,12 +39,22 @@ const Clients = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const queryClient = useQueryClient();
   const { data: clients, isLoading, isError } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: getClients,
   });
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    return clients.filter(client =>
+      client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.phone && client.phone.includes(searchTerm)) ||
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [clients, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -100,6 +111,15 @@ const Clients = () => {
           <CardDescription>
             هنا قائمة بجميع الموكلين المسجلين في النظام.
           </CardDescription>
+          <div className="relative mt-4">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ابحث بالاسم، الهاتف، أو البريد الإلكتروني..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-4 pr-8"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -123,8 +143,8 @@ const Clients = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients && clients.length > 0 ? (
-                  clients.map((client) => (
+                {filteredClients && filteredClients.length > 0 ? (
+                  filteredClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.full_name}</TableCell>
                       <TableCell>{client.phone || "-"}</TableCell>
@@ -144,7 +164,7 @@ const Clients = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center">
-                      لا يوجد موكلون لعرضهم.
+                      {searchTerm ? "لم يتم العثور على نتائج." : "لا يوجد موكلون لعرضهم."}
                     </TableCell>
                   </TableRow>
                 )}

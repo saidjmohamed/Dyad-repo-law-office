@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCases, deleteCase } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import {
   Card,
@@ -39,12 +40,23 @@ const Cases = () => {
   const [editingCase, setEditingCase] = useState<Case | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const queryClient = useQueryClient();
   const { data: cases, isLoading, isError } = useQuery<Case[]>({
     queryKey: ["cases"],
     queryFn: getCases,
   });
+
+  const filteredCases = useMemo(() => {
+    if (!cases) return [];
+    return cases.filter(caseItem =>
+      caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      caseItem.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [cases, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteCase,
@@ -101,6 +113,15 @@ const Cases = () => {
           <CardDescription>
             هنا قائمة بجميع القضايا المسجلة في النظام.
           </CardDescription>
+          <div className="relative mt-4">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ابحث برقم القضية، الموكل، النوع..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-4 pr-8"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -126,8 +147,8 @@ const Cases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cases && cases.length > 0 ? (
-                  cases.map((caseItem) => (
+                {filteredCases && filteredCases.length > 0 ? (
+                  filteredCases.map((caseItem) => (
                     <TableRow key={caseItem.id}>
                       <TableCell className="font-medium">{caseItem.case_number}</TableCell>
                       <TableCell>{caseItem.client_name}</TableCell>
@@ -151,7 +172,7 @@ const Cases = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
-                      لا يوجد قضايا لعرضها.
+                      {searchTerm ? "لم يتم العثور على نتائج." : "لا يوجد قضايا لعرضها."}
                     </TableCell>
                   </TableRow>
                 )}
