@@ -8,7 +8,7 @@ const Login = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         navigate('/')
       }
@@ -28,16 +28,33 @@ const Login = () => {
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
           providers={[]}
-          view="magic_link"
+          view="sign_in"
           localization={{
             variables: {
-              magic_link: {
-                email_input_label: 'البريد الإلكتروني',
+              sign_in: {
+                email_label: 'البريد الإلكتروني',
                 email_input_placeholder: 'your.email@example.com',
-                button_label: 'إرسال رابط الدخول',
-                confirmation_text: 'تم إرسال رابط الدخول إلى بريدك الإلكتروني.',
-                loading_button_label: 'جاري الإرسال ...'
+                password_label: 'كلمة المرور',
+                password_input_placeholder: '••••••••',
+                button_label: 'تسجيل الدخول',
+                loading_button_label: 'جاري تسجيل الدخول ...'
               },
+              sign_up: {
+                email_label: 'البريد الإلكتروني',
+                email_input_placeholder: 'your.email@example.com',
+                password_label: 'كلمة المرور',
+                password_input_placeholder: '••••••••',
+                button_label: 'إنشاء حساب',
+                loading_button_label: 'جاري إنشاء الحساب ...',
+                confirmation_text: 'تحقق من بريدك الإلكتروني لتأكيد حسابك.'
+              },
+              forgotten_password: {
+                email_label: 'البريد الإلكتروني',
+                email_input_placeholder: 'your.email@example.com',
+                button_label: 'إرسال تعليمات إعادة التعيين',
+                loading_button_label: 'جاري الإرسال ...',
+                confirmation_text: 'تم إرسال تعليمات إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.'
+              }
             },
           }}
           theme="light"
