@@ -49,10 +49,14 @@ const Clients = () => {
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
+    // Perform client-side filtering based on search term
     return clients.filter(client =>
       client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client.phone && client.phone.includes(searchTerm)) ||
-      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.national_id && client.national_id.includes(searchTerm)) ||
+      (client.address && client.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.notes && client.notes.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [clients, searchTerm]);
 

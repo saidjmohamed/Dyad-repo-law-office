@@ -51,11 +51,17 @@ const Cases = () => {
 
   const filteredCases = useMemo(() => {
     if (!cases) return [];
+    // Perform client-side filtering based on search term
     return cases.filter(caseItem =>
       caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase())
+      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (caseItem.division && caseItem.division.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (caseItem.last_adjournment_reason && caseItem.last_adjournment_reason.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (caseItem.judgment_summary && caseItem.judgment_summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      caseItem.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (caseItem.notes && caseItem.notes.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [cases, searchTerm]);
 
