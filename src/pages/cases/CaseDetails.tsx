@@ -14,7 +14,7 @@ import { CaseFinancials } from "./CaseFinancials";
 const CaseDetails = () => {
   const { caseId } = useParams<{ caseId: string }>();
 
-  const { data: caseDetails, isLoading, isError } = useQuery({
+  const { data: caseDetails, isLoading, isError, error } = useQuery({
     queryKey: ["case", caseId],
     queryFn: () => getCaseById(caseId!),
     enabled: !!caseId,
@@ -35,7 +35,12 @@ const CaseDetails = () => {
   }
 
   if (isError || !caseDetails) {
-    return <div className="text-red-500 text-center">حدث خطأ أثناء تحميل تفاصيل القضية.</div>;
+    return (
+      <div className="text-red-500 text-center p-4">
+        <p>حدث خطأ أثناء تحميل تفاصيل القضية.</p>
+        {error && <p className="text-sm mt-2">الخطأ: {error.message}</p>}
+      </div>
+    );
   }
 
   const { clients: client, hearings, tasks, case_files, financial_transactions } = caseDetails;
