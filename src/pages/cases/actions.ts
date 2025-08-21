@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { format } from "date-fns";
 
 export const caseSchema = z.object({
   case_type: z.string().min(1, "نوع القضية مطلوب"),
@@ -38,9 +39,15 @@ export const createCase = async (caseData: CaseFormData) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول");
 
+  const dataToInsert: { [key: string]: any } = { ...caseData, user_id: user.id };
+
+  if (caseData.filing_date) {
+    dataToInsert.filing_date = format(caseData.filing_date, "yyyy-MM-dd");
+  }
+
   const { data, error } = await supabase
     .from("cases")
-    .insert([{ ...caseData, user_id: user.id }])
+    .insert([dataToInsert])
     .select()
     .single();
 
