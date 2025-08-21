@@ -81,9 +81,21 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
           render={({ field }) => (
             <FormItem>
               <FormLabel>نوع القضية</FormLabel>
-              <FormControl>
-                <Input placeholder="جنائية، مدنية، تجارية..." {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع القضية..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="جنائية">جنائية</SelectItem>
+                  <SelectItem value="مدنية">مدنية</SelectItem>
+                  <SelectItem value="تجارية">تجارية</SelectItem>
+                  <SelectItem value="إدارية">إدارية</SelectItem>
+                  <SelectItem value="عمالية">عمالية</SelectItem>
+                  <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -116,6 +128,30 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
         />
         <FormField
           control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>حالة القضية</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر حالة القضية..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="جديدة">جديدة</SelectItem>
+                  <SelectItem value="قيد النظر">قيد النظر</SelectItem>
+                  <SelectItem value="مكتملة">مكتملة</SelectItem>
+                  <SelectItem value="مؤجلة">مؤجلة</SelectItem>
+                  <SelectItem value="منقوضة">منقوضة</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="filing_date"
           render={({ field }) => (
             <FormItem className="flex flex-col">
@@ -131,7 +167,7 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
                       )}
                     >
                       {field.value ? (
-                        format(field.value, "PPP")
+                        format(new Date(field.value), "PPP")
                       ) : (
                         <span>اختر تاريخًا</span>
                       )}
