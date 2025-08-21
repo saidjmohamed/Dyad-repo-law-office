@@ -54,10 +54,11 @@ type Case = {
 };
 
 const Cases = () => {
+  console.log("Cases component rendering..."); // Debugging log
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<Case | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null); // Corrected variable name
+  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCaseType, setFilterCaseType] = useState("");
@@ -74,9 +75,9 @@ const Cases = () => {
     queryFn: getClients,
   });
 
-  const { data: cases, isLoading, isError } = useQuery<Case[]>({
+  const { data: cases, isLoading, isError, error } = useQuery<Case[]>({ // Added error here for direct display
     queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
-    queryFn: () => getCases({ // Corrected: Wrap getCases in an arrow function
+    queryFn: () => getCases({
       searchTerm,
       case_type: filterCaseType || undefined,
       court: filterCourt || undefined,
@@ -111,13 +112,13 @@ const Cases = () => {
   };
 
   const handleDeleteClick = (id: string) => {
-    setDeletingCaseId(id); // Corrected: Use setDeletingCaseId
+    setDeletingCaseId(id);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
-    if (deletingCaseId) { // Corrected: Use deletingCaseId
-      deleteMutation.mutate(deletingCaseId); // Corrected: Use deletingCaseId
+    if (deletingCaseId) {
+      deleteMutation.mutate(deletingCaseId);
     }
   };
 
@@ -265,6 +266,7 @@ const Cases = () => {
           ) : isError ? (
             <div className="text-red-500 text-center py-4">
               حدث خطأ أثناء جلب البيانات.
+              {error && <p className="text-sm mt-2">الخطأ: {error.message}</p>} {/* Display actual error */}
             </div>
           ) : (
             <Table>
