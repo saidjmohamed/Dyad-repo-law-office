@@ -5,9 +5,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ArrowRight, Briefcase, Calendar, CheckSquare, Mail, Phone, User } from "lucide-react";
+import { ArrowRight, CheckSquare, Mail, Phone, User } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { CaseDocuments } from "./CaseDocuments";
 
 const CaseDetails = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -36,11 +37,11 @@ const CaseDetails = () => {
     return <div className="text-red-500 text-center">حدث خطأ أثناء تحميل تفاصيل القضية.</div>;
   }
 
-  const { clients: client, hearings, tasks } = caseDetails;
+  const { clients: client, hearings, tasks, case_files } = caseDetails;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">تفاصيل القضية: {caseDetails.case_number}</h1>
         <Link to="/cases" className="text-sm text-primary hover:underline flex items-center">
           <ArrowRight className="w-4 h-4 ml-1" />
@@ -48,7 +49,7 @@ const CaseDetails = () => {
         </Link>
       </div>
       
-      <div className="grid gap-6 lg:grid-cols-3 mb-6">
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>معلومات القضية</CardTitle>
@@ -76,6 +77,8 @@ const CaseDetails = () => {
           </Card>
         )}
       </div>
+
+      <CaseDocuments caseId={caseDetails.id} files={case_files || []} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

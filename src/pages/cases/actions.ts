@@ -43,7 +43,8 @@ export const getCaseById = async (id: string) => {
       *,
       clients (*),
       hearings (*),
-      tasks (*)
+      tasks (*),
+      case_files (*)
     `)
     .eq("id", id)
     .single();
@@ -53,14 +54,14 @@ export const getCaseById = async (id: string) => {
     throw new Error("لا يمكن جلب تفاصيل القضية.");
   }
 
-  // Sort hearings by date
   if (data.hearings) {
     data.hearings.sort((a, b) => new Date(b.hearing_date).getTime() - new Date(a.hearing_date).getTime());
   }
-
-  // Sort tasks by creation date
   if (data.tasks) {
     data.tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (data.case_files) {
+    data.case_files.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
   }
 
   return data;
