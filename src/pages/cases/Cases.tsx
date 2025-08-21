@@ -75,16 +75,16 @@ const Cases = () => {
     queryFn: getClients,
   });
 
-  const { data: cases, isLoading, isError, error } = useQuery<Case[]>({ // Added error here for direct display
+  const { data: cases, isLoading, isError, error } = useQuery<Case[]>({
     queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
     queryFn: () => getCases({
       searchTerm,
-      case_type: filterCaseType || undefined,
+      case_type: filterCaseType === "all" ? undefined : filterCaseType,
       court: filterCourt || undefined,
-      status: filterStatus || undefined,
+      status: filterStatus === "all" ? undefined : filterStatus,
       filing_date_from: filterFilingDateFrom,
       filing_date_to: filterFilingDateTo,
-      client_id: filterClientId || undefined,
+      client_id: filterClientId === "all" ? undefined : filterClientId,
     }),
   });
 
@@ -168,7 +168,7 @@ const Cases = () => {
                 <SelectValue placeholder="فلتر حسب نوع القضية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
                 <SelectItem value="جنائية">جنائية</SelectItem>
                 <SelectItem value="مدنية">مدنية</SelectItem>
                 <SelectItem value="تجارية">تجارية</SelectItem>
@@ -187,7 +187,7 @@ const Cases = () => {
                 <SelectValue placeholder="فلتر حسب الحالة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
                 <SelectItem value="جديدة">جديدة</SelectItem>
                 <SelectItem value="قيد النظر">قيد النظر</SelectItem>
                 <SelectItem value="مكتملة">مكتملة</SelectItem>
@@ -200,7 +200,7 @@ const Cases = () => {
                 <SelectValue placeholder="فلتر حسب الموكل" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
                 {clients?.map(client => (
                   <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>
                 ))}
