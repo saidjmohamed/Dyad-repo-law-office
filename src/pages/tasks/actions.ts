@@ -55,6 +55,22 @@ export const createTask = async (taskData: TaskFormData) => {
   return data;
 };
 
+export const updateTask = async ({ id, ...taskData }: TaskFormData & { id: string }) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .update(taskData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating task:", error);
+    throw new Error("لا يمكن تحديث المهمة.");
+  }
+
+  return data;
+};
+
 export const updateTaskStatus = async ({ id, done }: { id: string, done: boolean }) => {
     const { data, error } = await supabase
         .from('tasks')
@@ -69,4 +85,15 @@ export const updateTaskStatus = async ({ id, done }: { id: string, done: boolean
     }
 
     return data;
+};
+
+export const deleteTask = async (id: string) => {
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+  if (error) {
+    console.error("Error deleting task:", error);
+    throw new Error("لا يمكن حذف المهمة.");
+  }
+
+  return true;
 };

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTasks, updateTaskStatus } from "./actions";
+import { getTasks, updateTaskStatus, deleteTask } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 import { TaskSheet } from "./TaskSheet";
 import {
   Card,
@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess } from "@/utils/toast";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
-// Define a type for the task data structure
 type Task = {
   id: string;
   title: string;
@@ -26,19 +26,22 @@ type Task = {
   due_date: string | null;
   priority: string | null;
   case_number: string | null;
+  [key: string]: any;
 };
 
 const Tasks = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Apply the Task type to useQuery for type safety
   const { data: tasks, isLoading, isError } = useQuery<Task[]>({
     queryKey: ["tasks"],
     queryFn: getTasks,
   });
 
-  const mutation = useMutation<any, Error, { id: string; done: boolean }>({
+  const statusUpdateMutation = useMutation<any, Error, { id: string; done: boolean }>({
     mutationFn: updateTaskStatus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -49,8 +52,42 @@ const Tasks = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      showSuccess("تم حذف المهمة بنجاح.");
+      setIsDeleteDialogOpen(false);
+      setDeletingTaskId(null);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
   const handleStatusChange = (id: string, done: boolean) => {
-    mutation.mutate({ id, done });
+    statusUpdateMutation.mutate({ id, done });
+  };
+
+  const handleAddClick = () => {
+    setEditingTask(null);
+    setIsSheetOpen(true);
+  };
+
+  const handleEditClick = (task: Task) => {
+    setEditingTask(task);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingTaskId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingTaskId) {
+      deleteMutation.mutate(deletingTaskId);
+    }
   };
 
   const getPriorityBadgeVariant = (priority: string | null) => {
@@ -75,7 +112,7 @@ const Tasks = () => {
             تتبع وإدارة جميع المهام المطلوبة.
           </p>
         </div>
-        <Button onClick={() => setIsSheetOpen(true)}>
+        <Button onClick={handleAddClick}>
           <PlusCircle className="w-4 h-4 ml-2" />
           إضافة مهمة
         </Button>
@@ -124,7 +161,15 @@ const Tasks = () => {
                       {task.due_date && <span>تستحق في: {format(new Date(task.due_date), "PPP")}</span>}
                     </div>
                   </div>
-                  <Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority || 'متوسط'}</Badge>
+                  <div className="flex items-center space-x-2 space-x-reverse mr-2">
+                    <Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority || 'متوسط'}</Badge>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(task)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(task.id)}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -136,7 +181,13 @@ const Tasks = () => {
         </CardContent>
       </Card>
 
-      <TaskSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <TaskSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} task={editingTask} />
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
+      />
     </>
   );
 };

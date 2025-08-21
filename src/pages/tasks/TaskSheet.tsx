@@ -7,25 +7,32 @@ import {
 } from "@/components/ui/sheet";
 import { TaskForm } from "./TaskForm";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createTask, TaskFormData } from "./actions";
+import { createTask, updateTask, TaskFormData } from "./actions";
 import { getCases } from "../cases/actions";
 import { showSuccess, showError } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type Task = {
+  id: string;
+  [key: string]: any;
+};
+
 interface TaskSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  task?: Task | null;
 }
 
-export const TaskSheet = ({ open, onOpenChange }: TaskSheetProps) => {
+export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
   const queryClient = useQueryClient();
+  const isEditMode = !!task;
 
   const { data: cases, isLoading: isLoadingCases } = useQuery({
     queryKey: ["cases"],
     queryFn: getCases,
   });
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -37,22 +44,42 @@ export const TaskSheet = ({ open, onOpenChange }: TaskSheetProps) => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: updateTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      showSuccess("تم تحديث المهمة بنجاح.");
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
   const handleSubmit = (data: TaskFormData) => {
-    // Ensure null is passed for empty string case_id
     const submissionData = {
         ...data,
         case_id: data.case_id === "" ? null : data.case_id,
     };
-    mutation.mutate(submissionData);
+    if (isEditMode) {
+      updateMutation.mutate({ id: task.id, ...submissionData });
+    } else {
+      createMutation.mutate(submissionData);
+    }
   };
+
+  const defaultValues = task ? {
+    ...task,
+    due_date: task.due_date ? new Date(task.due_date) : null,
+  } : {};
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>إضافة مهمة جديدة</SheetTitle>
+          <SheetTitle>{isEditMode ? "تعديل المهمة" : "إضافة مهمة جديدة"}</SheetTitle>
           <SheetDescription>
-            أدخل تفاصيل المهمة الجديدة هنا. انقر على "حفظ" عند الانتهاء.
+            {isEditMode ? "قم بتحديث تفاصيل المهمة." : "أدخل تفاصيل المهمة الجديدة هنا."}
           </SheetDescription>
         </SheetHeader>
         <div className="py-4">
@@ -65,8 +92,9 @@ export const TaskSheet = ({ open, onOpenChange }: TaskSheetProps) => {
           ) : cases ? (
             <TaskForm 
               onSubmit={handleSubmit} 
-              isPending={mutation.isPending}
+              isPending={createMutation.isPending || updateMutation.isPending}
               cases={cases.map(c => ({ id: c.id, case_number: c.case_number, client_name: c.client_name }))}
+              defaultValues={defaultValues}
             />
           ) : (
             <div>لا يمكن تحميل قائمة القضايا.</div>
