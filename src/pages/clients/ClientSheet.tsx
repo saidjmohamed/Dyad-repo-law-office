@@ -7,18 +7,31 @@ import {
 } from "@/components/ui/sheet";
 import { ClientForm } from "./ClientForm";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient, ClientFormData } from "./actions";
+import { createClient, updateClient, ClientFormData } from "./actions";
 import { showSuccess, showError } from "@/utils/toast";
+
+// Define a type for the client data structure from the database
+type Client = {
+  id: string;
+  full_name: string;
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+};
 
 interface ClientSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  client?: Client | null;
 }
 
-export const ClientSheet = ({ open, onOpenChange }: ClientSheetProps) => {
+export const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
   const queryClient = useQueryClient();
+  const isEditMode = !!client;
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: createClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -30,21 +43,43 @@ export const ClientSheet = ({ open, onOpenChange }: ClientSheetProps) => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: updateClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      showSuccess("تم تحديث بيانات الموكل بنجاح.");
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
   const handleSubmit = (data: ClientFormData) => {
-    mutation.mutate(data);
+    if (isEditMode) {
+      updateMutation.mutate({ id: client.id, ...data });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>إضافة موكل جديد</SheetTitle>
+          <SheetTitle>{isEditMode ? "تعديل بيانات الموكل" : "إضافة موكل جديد"}</SheetTitle>
           <SheetDescription>
-            أدخل تفاصيل الموكل الجديد هنا. انقر على "حفظ" عند الانتهاء.
+            {isEditMode
+              ? "قم بتحديث التفاصيل أدناه. انقر على 'حفظ' عند الانتهاء."
+              : "أدخل تفاصيل الموكل الجديد هنا. انقر على 'حفظ' عند الانتهاء."}
           </SheetDescription>
         </SheetHeader>
         <div className="py-4">
-          <ClientForm onSubmit={handleSubmit} isPending={mutation.isPending} />
+          <ClientForm
+            onSubmit={handleSubmit}
+            isPending={createMutation.isPending || updateMutation.isPending}
+            defaultValues={client || {}}
+          />
         </div>
       </SheetContent>
     </Sheet>

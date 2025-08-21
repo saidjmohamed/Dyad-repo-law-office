@@ -43,3 +43,30 @@ export const createClient = async (clientData: ClientFormData) => {
 
   return data;
 };
+
+export const updateClient = async ({ id, ...clientData }: ClientFormData & { id: string }) => {
+  const { data, error } = await supabase
+    .from("clients")
+    .update(clientData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating client:", error);
+    throw new Error("لا يمكن تحديث بيانات الموكل.");
+  }
+
+  return data;
+};
+
+export const deleteClient = async (id: string) => {
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+
+  if (error) {
+    console.error("Error deleting client:", error);
+    throw new Error("لا يمكن حذف الموكل.");
+  }
+
+  return true;
+};

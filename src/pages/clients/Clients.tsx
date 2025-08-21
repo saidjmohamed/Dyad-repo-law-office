@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getClients } from "./actions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getClients, deleteClient } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 import { ClientSheet } from "./ClientSheet";
 import {
   Card,
@@ -20,13 +20,64 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { showSuccess, showError } from "@/utils/toast";
+
+type Client = {
+  id: string;
+  full_name: string;
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+};
 
 const Clients = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { data: clients, isLoading, isError } = useQuery({
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+  const { data: clients, isLoading, isError } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: getClients,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      showSuccess("تم حذف الموكل بنجاح.");
+      setIsDeleteDialogOpen(false);
+      setDeletingClientId(null);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
+  const handleAddClick = () => {
+    setEditingClient(null);
+    setIsSheetOpen(true);
+  };
+
+  const handleEditClick = (client: Client) => {
+    setEditingClient(client);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingClientId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingClientId) {
+      deleteMutation.mutate(deletingClientId);
+    }
+  };
 
   return (
     <>
@@ -37,7 +88,7 @@ const Clients = () => {
             عرض، إضافة، وتعديل بيانات الموكلين.
           </p>
         </div>
-        <Button onClick={() => setIsSheetOpen(true)}>
+        <Button onClick={handleAddClick}>
           <PlusCircle className="w-4 h-4 ml-2" />
           إضافة موكل
         </Button>
@@ -68,6 +119,7 @@ const Clients = () => {
                   <TableHead>الاسم الكامل</TableHead>
                   <TableHead>رقم الهاتف</TableHead>
                   <TableHead>البريد الإلكتروني</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -77,11 +129,21 @@ const Clients = () => {
                       <TableCell className="font-medium">{client.full_name}</TableCell>
                       <TableCell>{client.phone || "-"}</TableCell>
                       <TableCell>{client.email || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(client)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(client.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center">
+                    <TableCell colSpan={4} className="text-center">
                       لا يوجد موكلون لعرضهم.
                     </TableCell>
                   </TableRow>
@@ -92,7 +154,17 @@ const Clients = () => {
         </CardContent>
       </Card>
 
-      <ClientSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <ClientSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        client={editingClient}
+      />
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
+      />
     </>
   );
 };
