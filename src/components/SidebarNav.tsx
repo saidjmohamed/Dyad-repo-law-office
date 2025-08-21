@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Briefcase, CalendarClock, LayoutDashboard, Users } from "lucide-react";
+import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -7,6 +7,7 @@ const navigation = [
   { name: "الموكلون", href: "/clients", icon: Users },
   { name: "القضايا", href: "/cases", icon: Briefcase },
   { name: "الجلسات", href: "/hearings", icon: CalendarClock },
+  { name: "المهام", href: "/tasks", icon: ListTodo },
 ];
 
 interface SidebarNavProps {

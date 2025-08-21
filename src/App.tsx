@@ -11,6 +11,7 @@ import MainLayout from "./components/MainLayout";
 import Clients from "./pages/clients/Clients";
 import Cases from "./pages/cases/Cases";
 import Hearings from "./pages/hearings/Hearings";
+import Tasks from "./pages/tasks/Tasks";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/clients" element={<Clients />} />
             <Route path="/cases" element={<Cases />} />
             <Route path="/hearings" element={<Hearings />} />
+            <Route path="/tasks" element={<Tasks />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
