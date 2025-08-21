@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getCases } from "./actions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCases, deleteCase } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import {
   Card,
@@ -21,13 +21,64 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { showSuccess, showError } from "@/utils/toast";
+
+type Case = {
+  id: string;
+  case_number: string;
+  client_name: string;
+  case_type: string;
+  court: string;
+  status: string;
+  [key: string]: any;
+};
 
 const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { data: cases, isLoading, isError } = useQuery({
+  const [editingCase, setEditingCase] = useState<Case | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+  const { data: cases, isLoading, isError } = useQuery<Case[]>({
     queryKey: ["cases"],
     queryFn: getCases,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCase,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      showSuccess("تم حذف القضية بنجاح.");
+      setIsDeleteDialogOpen(false);
+      setDeletingCaseId(null);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
+  const handleAddClick = () => {
+    setEditingCase(null);
+    setIsSheetOpen(true);
+  };
+
+  const handleEditClick = (caseItem: Case) => {
+    setEditingCase(caseItem);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingCaseId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingCaseId) {
+      deleteMutation.mutate(deletingCaseId);
+    }
+  };
 
   return (
     <>
@@ -38,7 +89,7 @@ const Cases = () => {
             عرض، إضافة، وتعديل بيانات القضايا.
           </p>
         </div>
-        <Button onClick={() => setIsSheetOpen(true)}>
+        <Button onClick={handleAddClick}>
           <PlusCircle className="w-4 h-4 ml-2" />
           إضافة قضية
         </Button>
@@ -71,6 +122,7 @@ const Cases = () => {
                   <TableHead>نوع القضية</TableHead>
                   <TableHead>المحكمة</TableHead>
                   <TableHead>الحالة</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -84,11 +136,21 @@ const Cases = () => {
                       <TableCell>
                         <Badge>{caseItem.status}</Badge>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       لا يوجد قضايا لعرضها.
                     </TableCell>
                   </TableRow>
@@ -99,7 +161,17 @@ const Cases = () => {
         </CardContent>
       </Card>
 
-      <CaseSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <CaseSheet 
+        open={isSheetOpen} 
+        onOpenChange={setIsSheetOpen} 
+        caseItem={editingCase}
+      />
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
+      />
     </>
   );
 };

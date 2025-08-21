@@ -50,9 +50,35 @@ export const createCase = async (caseData: CaseFormData) => {
 
   if (error) {
     console.error("Error creating case:", error);
-    // Throw the actual database error message for better debugging
     throw new Error(`فشل إنشاء القضية: ${error.message}`);
   }
 
   return data;
+};
+
+export const updateCase = async ({ id, ...caseData }: CaseFormData & { id: string }) => {
+  const { data, error } = await supabase
+    .from("cases")
+    .update(caseData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating case:", error);
+    throw new Error(`فشل تحديث القضية: ${error.message}`);
+  }
+
+  return data;
+};
+
+export const deleteCase = async (id: string) => {
+  const { error } = await supabase.from("cases").delete().eq("id", id);
+
+  if (error) {
+    console.error("Error deleting case:", error);
+    throw new Error("لا يمكن حذف القضية.");
+  }
+
+  return true;
 };
