@@ -44,7 +44,8 @@ export const getCaseById = async (id: string) => {
       clients (*),
       hearings (*),
       tasks (*),
-      case_files (*)
+      case_files (*),
+      financial_transactions (*)
     `)
     .eq("id", id)
     .single();
@@ -62,6 +63,9 @@ export const getCaseById = async (id: string) => {
   }
   if (data.case_files) {
     data.case_files.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+  }
+  if (data.financial_transactions) {
+    data.financial_transactions.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
   }
 
   return data;

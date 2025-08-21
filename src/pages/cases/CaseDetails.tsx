@@ -9,6 +9,7 @@ import { ArrowRight, CheckSquare, Mail, Phone, User } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { CaseDocuments } from "./CaseDocuments";
+import { CaseFinancials } from "./CaseFinancials";
 
 const CaseDetails = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -37,7 +38,7 @@ const CaseDetails = () => {
     return <div className="text-red-500 text-center">حدث خطأ أثناء تحميل تفاصيل القضية.</div>;
   }
 
-  const { clients: client, hearings, tasks, case_files } = caseDetails;
+  const { clients: client, hearings, tasks, case_files, financial_transactions } = caseDetails;
 
   return (
     <div className="space-y-6">
@@ -77,6 +78,8 @@ const CaseDetails = () => {
           </Card>
         )}
       </div>
+
+      <CaseFinancials caseId={caseDetails.id} transactions={financial_transactions || []} />
 
       <CaseDocuments caseId={caseDetails.id} files={case_files || []} />
 
