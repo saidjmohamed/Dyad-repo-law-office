@@ -52,7 +52,8 @@ export const getCaseById = async (id: string) => {
 
   if (error) {
     console.error("Error fetching case details:", error);
-    throw new Error("لا يمكن جلب تفاصيل القضية.");
+    // Throw the actual database error message for better debugging
+    throw new Error(`فشل جلب تفاصيل القضية: ${error.message}`);
   }
 
   if (data.hearings) {
