@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
-import { format } from "date-fns";
 
 export const caseSchema = z.object({
   case_type: z.string().min(1, "نوع القضية مطلوب"),
@@ -30,8 +29,6 @@ export const getCases = async () => {
     throw new Error("لا يمكن جلب قائمة القضايا.");
   }
   
-  // The type from Supabase might be an array of objects, where `clients` is one of them.
-  // We need to flatten this structure for easier use in the component.
   return data.map(d => ({...d, client_name: d.clients.full_name, clients: undefined }));
 };
 
@@ -39,11 +36,7 @@ export const createCase = async (caseData: CaseFormData) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول");
 
-  const dataToInsert: { [key: string]: any } = { ...caseData, user_id: user.id };
-
-  if (caseData.filing_date) {
-    dataToInsert.filing_date = format(caseData.filing_date, "yyyy-MM-dd");
-  }
+  const dataToInsert = { ...caseData, user_id: user.id };
 
   const { data, error } = await supabase
     .from("cases")
