@@ -55,3 +55,30 @@ export const createHearing = async (hearingData: HearingFormData) => {
 
   return data;
 };
+
+export const updateHearing = async ({ id, ...hearingData }: HearingFormData & { id: string }) => {
+  const { data, error } = await supabase
+    .from("hearings")
+    .update(hearingData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating hearing:", error);
+    throw new Error("لا يمكن تحديث الجلسة.");
+  }
+
+  return data;
+};
+
+export const deleteHearing = async (id: string) => {
+  const { error } = await supabase.from("hearings").delete().eq("id", id);
+
+  if (error) {
+    console.error("Error deleting hearing:", error);
+    throw new Error("لا يمكن حذف الجلسة.");
+  }
+
+  return true;
+};
