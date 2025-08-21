@@ -17,6 +17,9 @@ type Hearing = {
   [key: string]: any;
 };
 
+// Define a type for cases data expected by HearingForm
+type CaseForHearingForm = { id: string; case_number: string; client_name: string };
+
 interface HearingSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,9 +30,9 @@ export const HearingSheet = ({ open, onOpenChange, hearing }: HearingSheetProps)
   const queryClient = useQueryClient();
   const isEditMode = !!hearing;
 
-  const { data: cases, isLoading: isLoadingCases } = useQuery({
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForHearingForm[]>({ // Corrected: Explicitly type cases
     queryKey: ["cases"],
-    queryFn: getCases,
+    queryFn: () => getCases(), // Corrected: Wrap getCases in an arrow function
   });
 
   const createMutation = useMutation({

@@ -17,6 +17,9 @@ type Task = {
   [key: string]: any;
 };
 
+// Define a type for cases data expected by TaskForm
+type CaseForTaskForm = { id: string; case_number: string; client_name: string };
+
 interface TaskSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,9 +30,9 @@ export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
   const queryClient = useQueryClient();
   const isEditMode = !!task;
 
-  const { data: cases, isLoading: isLoadingCases } = useQuery({
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForTaskForm[]>({ // Corrected: Explicitly type cases
     queryKey: ["cases"],
-    queryFn: getCases,
+    queryFn: () => getCases(), // Corrected: Wrap getCases in an arrow function
   });
 
   const createMutation = useMutation({
@@ -57,10 +60,14 @@ export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
   });
 
   const handleSubmit = (data: TaskFormData) => {
+    const submissionData = {
+        ...data,
+        case_id: data.case_id === "" ? null : data.case_id,
+    };
     if (isEditMode) {
-      updateMutation.mutate({ id: task.id, ...data });
+      updateMutation.mutate({ id: task.id, ...submissionData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(submissionData);
     }
   };
 

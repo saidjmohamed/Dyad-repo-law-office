@@ -11,20 +11,26 @@ import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
+// Define types for data fetched from queries
+type Client = { id: string; full_name: string; };
+type Case = { id: string; status: string; case_number: string; client_name: string; };
+type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; };
+type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; };
+
 const Index = () => {
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
+  const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: getClients,
   });
-  const { data: cases, isLoading: isLoadingCases } = useQuery({
+  const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
     queryKey: ["cases"],
-    queryFn: getCases,
+    queryFn: () => getCases(), // Corrected: Call getCases without filters for dashboard
   });
-  const { data: hearings, isLoading: isLoadingHearings } = useQuery({
+  const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ["hearings"],
     queryFn: getHearings,
   });
-  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: ["tasks"],
     queryFn: getTasks,
   });
@@ -45,7 +51,7 @@ const Index = () => {
   const pendingTasksList = tasks
     ?.filter(t => !t.done)
     .sort((a, b) => {
-        const priorityOrder = { 'عالية': 1, 'متوسط': 2, 'منخفضة': 3 };
+        const priorityOrder: { [key: string]: number } = { 'عالية': 1, 'متوسط': 2, 'منخفضة': 3 };
         return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
     })
     .slice(0, 5);

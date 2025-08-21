@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCases, deleteCase } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Search, CalendarIcon, FilterIcon } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import {
   Card,
@@ -25,6 +25,22 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import { Link } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { getClients } from "../clients/actions";
 
 type Case = {
   id: string;
@@ -33,6 +49,7 @@ type Case = {
   case_type: string;
   court: string;
   status: string;
+  filing_date?: string | null;
   [key: string]: any;
 };
 
@@ -40,30 +57,35 @@ const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<Case | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
+  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null); // Corrected variable name
+  
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCaseType, setFilterCaseType] = useState("");
+  const [filterCourt, setFilterCourt] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterFilingDateFrom, setFilterFilingDateFrom] = useState<Date | undefined>(undefined);
+  const [filterFilingDateTo, setFilterFilingDateTo] = useState<Date | undefined>(undefined);
+  const [filterClientId, setFilterClientId] = useState("");
 
   const queryClient = useQueryClient();
-  const { data: cases, isLoading, isError } = useQuery<Case[]>({
-    queryKey: ["cases"],
-    queryFn: getCases,
+
+  const { data: clients, isLoading: isLoadingClients } = useQuery({
+    queryKey: ["clients"],
+    queryFn: getClients,
   });
 
-  const filteredCases = useMemo(() => {
-    if (!cases) return [];
-    // Perform client-side filtering based on search term
-    return cases.filter(caseItem =>
-      caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (caseItem.division && caseItem.division.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (caseItem.last_adjournment_reason && caseItem.last_adjournment_reason.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (caseItem.judgment_summary && caseItem.judgment_summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      caseItem.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (caseItem.notes && caseItem.notes.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [cases, searchTerm]);
+  const { data: cases, isLoading, isError } = useQuery<Case[]>({
+    queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
+    queryFn: () => getCases({ // Corrected: Wrap getCases in an arrow function
+      searchTerm,
+      case_type: filterCaseType || undefined,
+      court: filterCourt || undefined,
+      status: filterStatus || undefined,
+      filing_date_from: filterFilingDateFrom,
+      filing_date_to: filterFilingDateTo,
+      client_id: filterClientId || undefined,
+    }),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: deleteCase,
@@ -89,14 +111,24 @@ const Cases = () => {
   };
 
   const handleDeleteClick = (id: string) => {
-    setDeletingCaseId(id);
+    setDeletingCaseId(id); // Corrected: Use setDeletingCaseId
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
-    if (deletingCaseId) {
-      deleteMutation.mutate(deletingCaseId);
+    if (deletingCaseId) { // Corrected: Use deletingCaseId
+      deleteMutation.mutate(deletingCaseId); // Corrected: Use deletingCaseId
     }
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterCaseType("");
+    setFilterCourt("");
+    setFilterStatus("");
+    setFilterFilingDateFrom(undefined);
+    setFilterFilingDateTo(undefined);
+    setFilterClientId("");
   };
 
   return (
@@ -120,14 +152,107 @@ const Cases = () => {
           <CardDescription>
             هنا قائمة بجميع القضايا المسجلة في النظام.
           </CardDescription>
-          <div className="relative mt-4">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="ابحث برقم القضية، الموكل، النوع..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-4 pr-8"
+              />
+            </div>
+            <Select value={filterCaseType} onValueChange={setFilterCaseType}>
+              <SelectTrigger>
+                <SelectValue placeholder="فلتر حسب نوع القضية" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="جنائية">جنائية</SelectItem>
+                <SelectItem value="مدنية">مدنية</SelectItem>
+                <SelectItem value="تجارية">تجارية</SelectItem>
+                <SelectItem value="إدارية">إدارية</SelectItem>
+                <SelectItem value="عمالية">عمالية</SelectItem>
+                <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
-              placeholder="ابحث برقم القضية، الموكل، النوع..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-4 pr-8"
+              placeholder="فلتر حسب المحكمة"
+              value={filterCourt}
+              onChange={(e) => setFilterCourt(e.target.value)}
             />
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="فلتر حسب الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="جديدة">جديدة</SelectItem>
+                <SelectItem value="قيد النظر">قيد النظر</SelectItem>
+                <SelectItem value="مكتملة">مكتملة</SelectItem>
+                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
+                <SelectItem value="منقوضة">منقوضة</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterClientId} onValueChange={setFilterClientId} disabled={isLoadingClients}>
+              <SelectTrigger>
+                <SelectValue placeholder="فلتر حسب الموكل" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                {clients?.map(client => (
+                  <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !filterFilingDateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="ml-2 h-4 w-4" />
+                  {filterFilingDateFrom ? format(filterFilingDateFrom, "PPP") : "تاريخ رفع الدعوى من"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filterFilingDateFrom}
+                  onSelect={setFilterFilingDateFrom}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !filterFilingDateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="ml-2 h-4 w-4" />
+                  {filterFilingDateTo ? format(filterFilingDateTo, "PPP") : "تاريخ رفع الدعوى إلى"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filterFilingDateTo}
+                  onSelect={setFilterFilingDateTo}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Button onClick={handleClearFilters} variant="outline" className="col-span-full lg:col-span-1">
+              <FilterIcon className="ml-2 h-4 w-4" />
+              مسح الفلاتر
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -154,8 +279,8 @@ const Cases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCases && filteredCases.length > 0 ? (
-                  filteredCases.map((caseItem) => (
+                {cases && cases.length > 0 ? (
+                  cases.map((caseItem) => (
                     <TableRow key={caseItem.id}>
                       <TableCell className="font-medium">
                         <Link to={`/cases/${caseItem.id}`} className="hover:underline text-primary">
@@ -183,7 +308,7 @@ const Cases = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
-                      {searchTerm ? "لم يتم العثور على نتائج." : "لا يوجد قضايا لعرضها."}
+                      {searchTerm || filterCaseType || filterCourt || filterStatus || filterFilingDateFrom || filterFilingDateTo || filterClientId ? "لم يتم العثور على نتائج مطابقة للفلاتر." : "لا يوجد قضايا لعرضها."}
                     </TableCell>
                   </TableRow>
                 )}

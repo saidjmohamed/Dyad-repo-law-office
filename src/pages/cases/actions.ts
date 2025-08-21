@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { format } from "date-fns";
 
 export const caseSchema = z.object({
   case_type: z.string().min(1, "نوع القضية مطلوب"),
@@ -13,8 +14,18 @@ export const caseSchema = z.object({
 
 export type CaseFormData = z.infer<typeof caseSchema>;
 
-export const getCases = async () => {
-  const { data, error } = await supabase
+interface GetCasesFilters {
+  searchTerm?: string;
+  case_type?: string;
+  court?: string;
+  status?: string;
+  filing_date_from?: Date;
+  filing_date_to?: Date;
+  client_id?: string;
+}
+
+export const getCases = async (filters?: GetCasesFilters) => {
+  let query = supabase
     .from("cases")
     .select(`
       *,
@@ -24,9 +35,35 @@ export const getCases = async () => {
     `)
     .order("created_at", { ascending: false });
 
+  if (filters?.searchTerm) {
+    const searchTsQuery = filters.searchTerm.split(' ').map(term => `${term}:*`).join(' & ');
+    query = query.filter('search_vector', '@@', searchTsQuery);
+  }
+
+  if (filters?.case_type) {
+    query = query.eq('case_type', filters.case_type);
+  }
+  if (filters?.court) {
+    query = query.ilike('court', `%${filters.court}%`);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.filing_date_from) {
+    query = query.gte('filing_date', format(filters.filing_date_from, 'yyyy-MM-dd'));
+  }
+  if (filters?.filing_date_to) {
+    query = query.lte('filing_date', format(filters.filing_date_to, 'yyyy-MM-dd'));
+  }
+  if (filters?.client_id) {
+    query = query.eq('client_id', filters.client_id);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
     console.error("Error fetching cases:", error);
-    throw new Error("لا يمكن جلب قائمة القضايا.");
+    throw new Error(`لا يمكن جلب قائمة القضايا: ${error.message}`);
   }
   
   return data.map(d => ({
