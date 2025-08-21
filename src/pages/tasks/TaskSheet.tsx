@@ -57,14 +57,10 @@ export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
   });
 
   const handleSubmit = (data: TaskFormData) => {
-    const submissionData = {
-        ...data,
-        case_id: data.case_id === "" ? null : data.case_id,
-    };
     if (isEditMode) {
-      updateMutation.mutate({ id: task.id, ...submissionData });
+      updateMutation.mutate({ id: task.id, ...data });
     } else {
-      createMutation.mutate(submissionData);
+      createMutation.mutate(data);
     }
   };
 

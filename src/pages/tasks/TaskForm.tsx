@@ -66,14 +66,17 @@ export const TaskForm = ({ onSubmit, isPending, cases, defaultValues }: TaskForm
           render={({ field }) => (
             <FormItem>
               <FormLabel>القضية المرتبطة (اختياري)</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+              <Select
+                onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                value={field.value || ""}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر قضية..." />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value=""><em>بدون قضية</em></SelectItem>
+                  <SelectItem value="none"><em>بدون قضية</em></SelectItem>
                   {cases.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.case_number} ({c.client_name})
