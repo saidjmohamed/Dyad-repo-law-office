@@ -12,12 +12,20 @@ export const hearingSchema = z.object({
 
 export type HearingFormData = z.infer<typeof hearingSchema>;
 
+// Define a type for the data returned by getCases
+export type CaseWithClientName = {
+  id: string;
+  case_number: string;
+  client_name: string;
+};
+
 export const getHearings = async () => {
   const { data, error } = await supabase
     .from("hearings")
     .select(`
       *,
       cases (
+        id,
         case_number,
         clients (
           full_name
@@ -35,6 +43,31 @@ export const getHearings = async () => {
     ...h,
     case_number: h.cases?.case_number,
     client_name: h.cases?.clients?.full_name,
+  }));
+};
+
+export const getCases = async (): Promise<CaseWithClientName[]> => {
+  const { data, error } = await supabase
+    .from("cases")
+    .select(`
+      id,
+      case_number,
+      clients (
+        full_name
+      )
+    `)
+    .order("case_number", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching cases:", error);
+    throw new Error("لا يمكن جلب قائمة القضايا.");
+  }
+
+  // Map the data to ensure client_name is always a string
+  return data.map(c => ({
+    id: c.id,
+    case_number: c.case_number,
+    client_name: c.clients ? (c.clients as { full_name: string }).full_name : 'غير معروف', // Provide a default string
   }));
 };
 
@@ -57,9 +90,12 @@ export const createHearing = async (hearingData: HearingFormData) => {
 };
 
 export const updateHearing = async ({ id, ...hearingData }: HearingFormData & { id: string }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("المستخدم غير مسجل الدخول");
+
   const { data, error } = await supabase
     .from("hearings")
-    .update(hearingData)
+    .update({ ...hearingData, user_id: user.id })
     .eq("id", id)
     .select()
     .single();

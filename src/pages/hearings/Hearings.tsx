@@ -30,7 +30,10 @@ type HearingData = {
   case_number?: string;
   client_name?: string;
   room?: string | null;
-  case_id?: string; // Added case_id as optional
+  case_id?: string | null; // Added case_id as optional and nullable
+  judge?: string | null;
+  result?: string | null;
+  notes?: string | null;
   [key: string]: any;
 };
 
@@ -114,8 +117,8 @@ const Hearings = () => {
               حدث خطأ أثناء جلب البيانات.
             </div>
           ) : (
-            <div className="overflow-x-auto"> {/* Added overflow-x-auto */}
-              <Table className="min-w-full"> {/* Added min-w-full */}
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-right">تاريخ الجلسة</TableHead>
@@ -134,7 +137,7 @@ const Hearings = () => {
                         <TableCell className="text-right">{hearing.client_name}</TableCell>
                         <TableCell className="text-right">{hearing.room || "-"}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center space-x-2 space-x-reverse justify-end"> {/* Added justify-end */}
+                          <div className="flex items-center space-x-2 space-x-reverse justify-end">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(hearing)}>
                               <Pencil className="w-4 h-4" />
                             </Button>
