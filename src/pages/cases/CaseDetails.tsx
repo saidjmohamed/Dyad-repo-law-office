@@ -49,7 +49,7 @@ const CaseDetails = () => {
         <Card>
           <CardHeader><CardTitle>معلومات أساسية</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <p><strong>الموكل:</strong> {caseDetails.client?.full_name || "غير محدد"}</p>
+            <p><strong>الموكل:</strong> {caseDetails.clients?.full_name || "غير محدد"}</p>
             <p><strong>نوع القضية:</strong> {caseDetails.case_type}</p>
             <p><strong>جهة التقاضي:</strong> {caseDetails.court}</p>
             <p><strong>القسم/الغرفة:</strong> {caseDetails.division || "-"}</p>
