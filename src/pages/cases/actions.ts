@@ -69,7 +69,7 @@ export const getCaseById = async (id: string) => {
     .from("cases")
     .select(`
       *,
-      clients(*),
+      client:clients(*),
       hearings(*),
       tasks(*),
       documents(*),
