@@ -55,7 +55,7 @@ export const HearingForm = ({ onSubmit, isPending, cases, defaultValues }: Heari
             <FormItem>
               <FormLabel>القضية</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value === "" ? null : value)} // Convert empty string back to null
+                onValueChange={(value) => field.onChange(value === "none" ? null : value)}
                 value={field.value || ""}
               >
                 <FormControl>
@@ -64,7 +64,7 @@ export const HearingForm = ({ onSubmit, isPending, cases, defaultValues }: Heari
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value=""><em>بدون قضية</em></SelectItem> {/* Option for no case */}
+                  <SelectItem value="none"><em>بدون قضية</em></SelectItem>
                   {cases.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.case_number} ({c.client_name})
