@@ -14,11 +14,11 @@ import { showSuccess, showError } from "@/utils/toast";
 type Client = {
   id: string;
   full_name: string;
-  national_id?: string | null; // Changed to allow null
-  phone?: string | null; // Changed to allow null
-  email?: string | null; // Changed to allow null
-  address?: string | null; // Changed to allow null
-  notes?: string | null; // Changed to allow null
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
 };
 
 interface ClientSheetProps {
@@ -63,6 +63,16 @@ export const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) =>
     }
   };
 
+  // Prepare default values, converting null to undefined for form compatibility
+  const defaultValues = client ? {
+    ...client,
+    national_id: client.national_id ?? undefined,
+    phone: client.phone ?? undefined,
+    email: client.email ?? undefined,
+    address: client.address ?? undefined,
+    notes: client.notes ?? undefined,
+  } : undefined;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
@@ -78,7 +88,7 @@ export const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) =>
           <ClientForm
             onSubmit={handleSubmit}
             isPending={createMutation.isPending || updateMutation.isPending}
-            defaultValues={client || undefined}
+            defaultValues={defaultValues}
           />
         </div>
       </SheetContent>

@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge";
 // Define types for data fetched from queries
 type Client = { id: string; full_name: string; };
 type Case = { id: string; status: string; case_number: string; client_name: string; };
-type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; };
-type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; };
+type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; case_id: string; }; // Added case_id
+type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; case_id?: string | null; }; // Added case_id
 
 const Index = () => {
   const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
@@ -24,7 +24,7 @@ const Index = () => {
   });
   const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases(), // Corrected: Call getCases without filters for dashboard
+    queryFn: () => getCases(),
   });
   const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ["hearings"],
@@ -118,7 +118,11 @@ const Index = () => {
                   upcomingHearingsList.map(hearing => (
                     <TableRow key={hearing.id}>
                       <TableCell>{format(new Date(hearing.hearing_date), "yyyy/MM/dd")}</TableCell>
-                      <TableCell>{hearing.case_number}</TableCell>
+                      <TableCell>
+                        <Link to={`/cases/${hearing.case_id}`} className="hover:underline text-primary">
+                          {hearing.case_number}
+                        </Link>
+                      </TableCell>
                       <TableCell>{hearing.client_name}</TableCell>
                     </TableRow>
                   ))
@@ -147,7 +151,13 @@ const Index = () => {
                 <div className="space-y-2">
                     {pendingTasksList.map(task => (
                         <div key={task.id} className="flex justify-between items-center text-sm">
-                            <span>{task.title}</span>
+                            {task.case_id ? (
+                                <Link to={`/cases/${task.case_id}`} className="hover:underline text-primary">
+                                    <span>{task.title}</span>
+                                </Link>
+                            ) : (
+                                <span>{task.title}</span>
+                            )}
                             <Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority || 'متوسط'}</Badge>
                         </div>
                     ))}
