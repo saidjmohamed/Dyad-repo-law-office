@@ -30,7 +30,7 @@ type HearingData = {
   case_number?: string;
   client_name?: string;
   room?: string | null;
-  case_id?: string | null; // Added case_id as optional and nullable
+  case_id?: string | null;
   judge?: string | null;
   result?: string | null;
   notes?: string | null;
@@ -125,6 +125,7 @@ const Hearings = () => {
                     <TableHead className="text-right">رقم القضية</TableHead>
                     <TableHead className="text-right">الموكل</TableHead>
                     <TableHead className="text-right">القاعة</TableHead>
+                    <TableHead className="text-right">طبيعة الإجراء</TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -133,9 +134,10 @@ const Hearings = () => {
                     hearings.map((hearing) => (
                       <TableRow key={hearing.id}>
                         <TableCell className="text-right">{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
-                        <TableCell className="font-medium text-right">{hearing.case_number}</TableCell>
-                        <TableCell className="text-right">{hearing.client_name}</TableCell>
+                        <TableCell className="font-medium text-right">{hearing.case_number || "-"}</TableCell>
+                        <TableCell className="text-right">{hearing.client_name || "-"}</TableCell>
                         <TableCell className="text-right">{hearing.room || "-"}</TableCell>
+                        <TableCell className="text-right">{hearing.result || "-"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center space-x-2 space-x-reverse justify-end">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(hearing)}>
@@ -150,7 +152,7 @@ const Hearings = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         لا يوجد جلسات لعرضها.
                       </TableCell>
                     </TableRow>
