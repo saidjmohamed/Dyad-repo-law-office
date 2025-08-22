@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 export const hearingSchema = z.object({
-  case_id: z.string().uuid("يجب اختيار قضية صحيحة"),
+  case_id: z.string().uuid("يجب اختيار قضية صحيحة").nullable().optional(),
   hearing_date: z.date({ required_error: "تاريخ الجلسة مطلوب" }),
   room: z.string().optional(),
   judge: z.string().optional(),
