@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import arLocale from '@fullcalendar/core/locales/ar';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CalendarPlus } from 'lucide-react';
 
 const CalendarPage = () => {
   const navigate = useNavigate();
@@ -59,6 +61,12 @@ const CalendarPage = () => {
       navigate(clickInfo.event.url);
     }
   };
+
+  const handleConnectGoogleCalendar = () => {
+    // TODO: Implement Google Calendar OAuth flow
+    console.log("Connecting to Google Calendar...");
+    alert("سيتم ربط تقويم Google قريباً!");
+  };
   
   const isLoading = isLoadingHearings || isLoadingTasks;
 
@@ -71,6 +79,10 @@ const CalendarPage = () => {
             عرض مركزي لجميع الجلسات والمهام القادمة.
           </p>
         </div>
+        <Button onClick={handleConnectGoogleCalendar}>
+            <CalendarPlus className="w-4 h-4 ml-2" />
+            ربط تقويم Google
+        </Button>
       </div>
       
       <Card>
