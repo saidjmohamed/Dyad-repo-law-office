@@ -1,198 +1,81 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCaseById } from "./actions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ArrowRight, CheckSquare, Mail, Phone, User } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { CaseDocuments } from "./CaseDocuments";
-import { CaseFinancials } from "./CaseFinancials";
-
-// Define types for nested data structures
-type ClientDetails = {
-  id: string;
-  full_name: string;
-  phone?: string | null;
-  email?: string | null;
-};
-
-type HearingDetails = {
-  id: string;
-  hearing_date: string;
-  result?: string | null;
-  created_at: string;
-};
-
-type TaskDetails = {
-  id: string;
-  title: string;
-  done: boolean;
-  due_date?: string | null;
-  created_at: string;
-};
-
-type CaseFile = { // Renamed from CaseFileDetails to match CaseDocuments prop type
-  id: string;
-  file_name: string;
-  file_path: string;
-  mime_type?: string | null;
-  size: number;
-  uploaded_at: string;
-};
-
-type FinancialTransaction = { // Renamed from FinancialTransactionDetails to match CaseFinancials prop type
-  id: string;
-  transaction_type: 'أتعاب' | 'مصروف';
-  description: string;
-  amount: number;
-  transaction_date: string;
-};
-
-type CaseDetailsData = {
-  id: string;
-  case_number: string;
-  status: string;
-  case_type: string;
-  court: string;
-  filing_date?: string | null;
-  notes?: string | null;
-  clients: ClientDetails;
-  hearings: HearingDetails[];
-  tasks: TaskDetails[];
-  case_files: CaseFile[]; // Updated type
-  financial_transactions: FinancialTransaction[]; // Updated type
-};
-
 
 const CaseDetails = () => {
-  const { caseId } = useParams<{ caseId: string }>();
+  const { id } = useParams<{ id: string }>();
 
-  const { data: caseDetails, isLoading, isError, error } = useQuery<CaseDetailsData>({
-    queryKey: ["case", caseId],
-    queryFn: () => getCaseById(caseId!),
-    enabled: !!caseId,
+  const { data: caseDetails, isLoading, isError } = useQuery({
+    queryKey: ["case", id],
+    queryFn: () => getCaseById(id!),
+    enabled: !!id,
   });
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-1/3" />
-        <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-12 w-1/2" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
-        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (isError || !caseDetails) {
-    return (
-      <div className="text-red-500 text-center p-4">
-        <p>حدث خطأ أثناء تحميل تفاصيل القضية.</p>
-        {error && <p className="text-sm mt-2">الخطأ: {error.message}</p>}
-      </div>
-    );
+    return <div className="text-red-500 text-center py-10">حدث خطأ أثناء جلب تفاصيل القضية.</div>;
   }
 
-  const { clients: client, hearings, tasks, case_files, financial_transactions } = caseDetails;
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">تفاصيل القضية: {caseDetails.case_number}</h1>
-        <Link to="/cases" className="text-sm text-primary hover:underline flex items-center">
-          <ArrowRight className="w-4 h-4 ml-1" />
-          العودة إلى قائمة القضايا
-        </Link>
-      </div>
-      
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>معلومات القضية</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            <div><strong>رقم القضية:</strong> {caseDetails.case_number}</div>
-            <div><strong>الحالة:</strong> <Badge>{caseDetails.status}</Badge></div>
-            <div><strong>نوع القضية:</strong> {caseDetails.case_type}</div>
-            <div><strong>المحكمة:</strong> {caseDetails.court}</div>
-            <div><strong>تاريخ رفع الدعوى:</strong> {caseDetails.filing_date ? format(new Date(caseDetails.filing_date), "PPP") : "-"}</div>
-            {caseDetails.notes && <div className="col-span-2"><strong>ملاحظات:</strong> {caseDetails.notes}</div>}
-          </CardContent>
-        </Card>
-        
-        {client && (
-          <Card>
-            <CardHeader>
-              <CardTitle>معلومات الموكل</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center"><User className="w-4 h-4 ml-2 text-muted-foreground" /> {client.full_name}</div>
-              <div className="flex items-center"><Phone className="w-4 h-4 ml-2 text-muted-foreground" /> {client.phone || "-"}</div>
-              <div className="flex items-center"><Mail className="w-4 h-4 ml-2 text-muted-foreground" /> {client.email || "-"}</div>
-            </CardContent>
-          </Card>
-        )}
+    <div>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">تفاصيل القضية: {caseDetails.case_number}</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            عرض شامل لجميع المعلومات المتعلقة بالقضية.
+          </p>
+        </div>
+        <Badge>{caseDetails.status || "جديدة"}</Badge>
       </div>
 
-      <CaseFinancials caseId={caseDetails.id} transactions={financial_transactions || []} />
-
-      <CaseDocuments caseId={caseDetails.id} files={case_files || []} />
-
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>الجلسات</CardTitle>
-            <CardDescription>كل الجلسات المتعلقة بهذه القضية.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {hearings && hearings.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>التاريخ</TableHead>
-                    <TableHead>النتيجة</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {hearings.map((hearing: HearingDetails) => (
-                    <TableRow key={hearing.id}>
-                      <TableCell>{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
-                      <TableCell>{hearing.result || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center text-muted-foreground">لا توجد جلسات مرتبطة.</p>
-            )}
+          <CardHeader><CardTitle>معلومات أساسية</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <p><strong>الموكل:</strong> {caseDetails.clients?.full_name || "غير محدد"}</p>
+            <p><strong>نوع القضية:</strong> {caseDetails.case_type}</p>
+            <p><strong>جهة التقاضي:</strong> {caseDetails.court}</p>
+            <p><strong>القسم/الغرفة:</strong> {caseDetails.division || "-"}</p>
+            <p><strong>تاريخ القيد:</strong> {caseDetails.filing_date ? format(new Date(caseDetails.filing_date), "PPP") : "-"}</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>المهام</CardTitle>
-            <CardDescription>كل المهام المتعلقة بهذه القضية.</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>الأطراف</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <p><strong>صفة الموكل:</strong> {caseDetails.role_in_favor || "-"}</p>
+            <p><strong>صفة الخصم:</strong> {caseDetails.role_against || "-"}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>الأتعاب</CardTitle></CardHeader>
           <CardContent>
-            {tasks && tasks.length > 0 ? (
-              <div className="space-y-2">
-                {tasks.map((task: TaskDetails) => (
-                  <div key={task.id} className={cn("flex items-center text-sm", task.done && "text-muted-foreground line-through")}>
-                    <CheckSquare className="w-4 h-4 ml-2" />
-                    <span>{task.title}</span>
-                    {task.due_date && <span className="mr-auto text-xs">{format(new Date(task.due_date), "PPP")}</span>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground">لا توجد مهام مرتبطة.</p>
-            )}
+            <p><strong>الأتعاب التقديرية:</strong> {caseDetails.fees_estimated ? `${caseDetails.fees_estimated} د.ج` : "-"}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2 lg:col-span-3">
+          <CardHeader><CardTitle>ملاحظات</CardTitle></CardHeader>
+          <CardContent>
+            <p>{caseDetails.notes || "لا توجد ملاحظات."}</p>
           </CardContent>
         </Card>
       </div>

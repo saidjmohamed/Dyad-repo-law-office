@@ -1,19 +1,17 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { CaseForm } from "./CaseForm";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createCase, updateCase, CaseFormData } from "./actions";
 import { getClients } from "../clients/actions";
 import { showSuccess, showError } from "@/utils/toast";
-import { Skeleton } from "@/components/ui/skeleton";
 
-// Define a type for the case data structure from the database
-type Case = {
+type CaseData = {
   id: string;
   [key: string]: any;
 };
@@ -21,12 +19,11 @@ type Case = {
 interface CaseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseItem?: Case | null;
+  caseData?: CaseData | null;
 }
 
-export const CaseSheet = ({ open, onOpenChange, caseItem }: CaseSheetProps) => {
+export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
   const queryClient = useQueryClient();
-  const isEditMode = !!caseItem;
 
   const { data: clients, isLoading: isLoadingClients } = useQuery({
     queryKey: ["clients"],
@@ -49,7 +46,7 @@ export const CaseSheet = ({ open, onOpenChange, caseItem }: CaseSheetProps) => {
     mutationFn: updateCase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess("تم تحديث بيانات القضية بنجاح.");
+      showSuccess("تم تحديث القضية بنجاح.");
       onOpenChange(false);
     },
     onError: (error) => {
@@ -57,48 +54,33 @@ export const CaseSheet = ({ open, onOpenChange, caseItem }: CaseSheetProps) => {
     },
   });
 
-  const handleSubmit = (data: CaseFormData) => {
-    if (isEditMode) {
-      updateMutation.mutate({ id: caseItem.id, ...data });
+  const onSubmit = (data: CaseFormData) => {
+    if (caseData) {
+      updateMutation.mutate({ id: caseData.id, ...data });
     } else {
       createMutation.mutate(data);
     }
   };
 
-  const defaultValues = caseItem ? {
-    ...caseItem,
-    filing_date: caseItem.filing_date ? new Date(caseItem.filing_date) : null,
-  } : {};
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{isEditMode ? "تعديل بيانات القضية" : "إضافة قضية جديدة"}</SheetTitle>
+          <SheetTitle>{caseData ? "تعديل قضية" : "إضافة قضية جديدة"}</SheetTitle>
           <SheetDescription>
-            {isEditMode
-              ? "قم بتحديث التفاصيل أدناه. انقر على 'حفظ' عند الانتهاء."
-              : "أدخل تفاصيل القضية الجديدة هنا. انقر على 'حفظ' عند الانتهاء."}
+            {caseData ? "قم بتعديل تفاصيل القضية." : "أدخل تفاصيل القضية الجديدة هنا."}
           </SheetDescription>
         </SheetHeader>
-        <div className="py-4">
-          {isLoadingClients ? (
-            <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-          ) : clients ? (
-            <CaseForm 
-              onSubmit={handleSubmit} 
-              isPending={createMutation.isPending || updateMutation.isPending}
-              clients={clients}
-              defaultValues={defaultValues}
-            />
-          ) : (
-            <div>لا يمكن تحميل قائمة الموكلين.</div>
-          )}
-        </div>
+        {isLoadingClients ? (
+          <div>جاري تحميل الموكلين...</div>
+        ) : (
+          <CaseForm
+            onSubmit={onSubmit}
+            isPending={createMutation.isPending || updateMutation.isPending}
+            defaultValues={caseData || {}}
+            clients={clients || []}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

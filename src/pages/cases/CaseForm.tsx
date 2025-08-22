@@ -1,52 +1,49 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { caseSchema, CaseFormData } from "./actions";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { judicialStructure } from "@/data/judicialStructure";
 
 interface CaseFormProps {
   onSubmit: (data: CaseFormData) => void;
   isPending: boolean;
+  defaultValues?: Partial<CaseFormData> & { id?: string };
   clients: { id: string; full_name: string }[];
-  defaultValues?: Partial<CaseFormData>;
 }
 
-export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFormProps) => {
+export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFormProps) => {
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
-    defaultValues: defaultValues || {
-      case_type: "",
-      court: "",
-      case_number: "",
-      status: "جديدة",
-      notes: "",
+    defaultValues: {
+      ...defaultValues,
+      filing_date: defaultValues?.filing_date ? new Date(defaultValues.filing_date) : undefined,
     },
   });
+
+  const selectedCourt = form.watch("court");
+
+  useEffect(() => {
+    if (selectedCourt) {
+      form.setValue("division", "");
+    }
+  }, [selectedCourt, form.setValue]);
+
+  const divisions =
+    selectedCourt === judicialStructure.tribunal.title
+      ? judicialStructure.tribunal.sections
+      : selectedCourt === judicialStructure.court_of_appeal.title
+      ? judicialStructure.court_of_appeal.chambers
+      : [];
 
   return (
     <Form {...form}>
@@ -60,7 +57,7 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر موكلاً..." />
+                    <SelectValue placeholder="اختر الموكل..." />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -75,6 +72,7 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="case_type"
@@ -88,31 +86,71 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="جنائية">جنائية</SelectItem>
                   <SelectItem value="مدنية">مدنية</SelectItem>
+                  <SelectItem value="جزائية">جزائية</SelectItem>
                   <SelectItem value="تجارية">تجارية</SelectItem>
                   <SelectItem value="إدارية">إدارية</SelectItem>
-                  <SelectItem value="عمالية">عمالية</SelectItem>
                   <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
+                  <SelectItem value="عقارية">عقارية</SelectItem>
+                  <SelectItem value="اجتماعية">اجتماعية</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="court"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>المحكمة</FormLabel>
-              <FormControl>
-                <Input placeholder="المحكمة العامة بـ..." {...field} />
-              </FormControl>
+              <FormLabel>جهة التقاضي</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر جهة التقاضي..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={judicialStructure.tribunal.title}>
+                    {judicialStructure.tribunal.title}
+                  </SelectItem>
+                  <SelectItem value={judicialStructure.court_of_appeal.title}>
+                    {judicialStructure.court_of_appeal.title}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="division"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>القسم / الغرفة</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCourt}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر القسم أو الغرفة..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {divisions.map((division: string) => (
+                    <SelectItem key={division} value={division}>
+                      {division}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="case_number"
@@ -120,42 +158,19 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
             <FormItem>
               <FormLabel>رقم القضية</FormLabel>
               <FormControl>
-                <Input placeholder="123/45/ق" {...field} />
+                <Input placeholder="أدخل رقم القضية..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>حالة القضية</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر حالة القضية..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="جديدة">جديدة</SelectItem>
-                  <SelectItem value="قيد النظر">قيد النظر</SelectItem>
-                  <SelectItem value="مكتملة">مكتملة</SelectItem>
-                  <SelectItem value="مؤجلة">مؤجلة</SelectItem>
-                  <SelectItem value="منقوضة">منقوضة</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
         <FormField
           control={form.control}
           name="filing_date"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>تاريخ رفع الدعوى</FormLabel>
+              <FormLabel>تاريخ القيد</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -167,7 +182,7 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
                       )}
                     >
                       {field.value ? (
-                        format(new Date(field.value), "PPP")
+                        format(field.value, "PPP")
                       ) : (
                         <span>اختر تاريخًا</span>
                       )}
@@ -188,6 +203,50 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="role_in_favor"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>صفة الموكل (لصالح)</FormLabel>
+                <FormControl>
+                  <Input placeholder="مدعي، مدعى عليه..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="role_against"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>صفة الخصم (ضد)</FormLabel>
+                <FormControl>
+                  <Input placeholder="مدعي، مدعى عليه..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="fees_estimated"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>الأتعاب التقديرية</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="أدخل مبلغ الأتعاب..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="notes"
@@ -195,12 +254,13 @@ export const CaseForm = ({ onSubmit, isPending, clients, defaultValues }: CaseFo
             <FormItem>
               <FormLabel>ملاحظات</FormLabel>
               <FormControl>
-                <Textarea placeholder="أي ملاحظات إضافية..." {...field} />
+                <Textarea placeholder="أضف ملاحظات حول القضية..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <Button type="submit" disabled={isPending}>
           {isPending ? "جاري الحفظ..." : "حفظ"}
         </Button>

@@ -1,9 +1,9 @@
-import { useState } from "react"; // Removed useMemo
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCases, deleteCase } from "./actions";
+import { getClients } from "../clients/actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PlusCircle, Pencil, Trash2, Search, CalendarIcon, FilterIcon } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Eye } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import {
   Card,
@@ -21,42 +21,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { showSuccess, showError } from "@/utils/toast";
 import { Link } from "react-router-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { getClients } from "../clients/actions";
+import { CalendarIcon } from "lucide-react";
+import { judicialStructure } from "@/data/judicialStructure";
 
-type Case = {
+type CaseData = {
   id: string;
-  case_number: string;
-  client_name: string;
   case_type: string;
   court: string;
-  status: string;
+  division?: string | null;
+  case_number: string;
   filing_date?: string | null;
+  status?: string | null;
+  clients?: { full_name: string } | null;
   [key: string]: any;
 };
 
 const Cases = () => {
-  console.log("Cases component rendering..."); // Debugging log
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingCase, setEditingCase] = useState<Case | null>(null);
+  const [editingCase, setEditingCase] = useState<CaseData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
   
@@ -70,22 +60,22 @@ const Cases = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
-    queryKey: ["clients"],
-    queryFn: getClients,
-  });
-
-  const { data: cases, isLoading, isError, error } = useQuery<Case[]>({
+  const { data: cases, isLoading, isError } = useQuery<CaseData[]>({
     queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
     queryFn: () => getCases({
       searchTerm,
-      case_type: filterCaseType === "all" ? undefined : filterCaseType,
-      court: filterCourt || undefined,
-      status: filterStatus === "all" ? undefined : filterStatus,
-      filing_date_from: filterFilingDateFrom,
-      filing_date_to: filterFilingDateTo,
-      client_id: filterClientId === "all" ? undefined : filterClientId,
+      filterCaseType,
+      filterCourt,
+      filterStatus,
+      filterFilingDateFrom: filterFilingDateFrom?.toISOString(),
+      filterFilingDateTo: filterFilingDateTo?.toISOString(),
+      filterClientId,
     }),
+  });
+
+  const { data: clients } = useQuery({
+    queryKey: ["clients"],
+    queryFn: getClients,
   });
 
   const deleteMutation = useMutation({
@@ -106,8 +96,8 @@ const Cases = () => {
     setIsSheetOpen(true);
   };
 
-  const handleEditClick = (caseItem: Case) => {
-    setEditingCase(caseItem);
+  const handleEditClick = (caseData: CaseData) => {
+    setEditingCase(caseData);
     setIsSheetOpen(true);
   };
 
@@ -122,7 +112,7 @@ const Cases = () => {
     }
   };
 
-  const handleClearFilters = () => {
+  const clearFilters = () => {
     setSearchTerm("");
     setFilterCaseType("");
     setFilterCourt("");
@@ -147,114 +137,85 @@ const Cases = () => {
         </Button>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>تصفية القضايا</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Input
+              placeholder="ابحث برقم القضية، الموكل..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Select value={filterCaseType} onValueChange={setFilterCaseType}>
+              <SelectTrigger><SelectValue placeholder="نوع القضية" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="مدنية">مدنية</SelectItem>
+                <SelectItem value="جزائية">جزائية</SelectItem>
+                <SelectItem value="تجارية">تجارية</SelectItem>
+                <SelectItem value="إدارية">إدارية</SelectItem>
+                <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
+                <SelectItem value="عقارية">عقارية</SelectItem>
+                <SelectItem value="اجتماعية">اجتماعية</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterCourt} onValueChange={setFilterCourt}>
+              <SelectTrigger><SelectValue placeholder="جهة التقاضي" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={judicialStructure.tribunal.title}>{judicialStructure.tribunal.title}</SelectItem>
+                <SelectItem value={judicialStructure.court_of_appeal.title}>{judicialStructure.court_of_appeal.title}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger><SelectValue placeholder="حالة القضية" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="جديدة">جديدة</SelectItem>
+                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
+                <SelectItem value="للحكم">للحكم</SelectItem>
+                <SelectItem value="محكومة">محكومة</SelectItem>
+                <SelectItem value="منتهية">منتهية</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterClientId} onValueChange={setFilterClientId}>
+              <SelectTrigger><SelectValue placeholder="الموكل" /></SelectTrigger>
+              <SelectContent>
+                {clients?.map(client => <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterFilingDateFrom ? format(filterFilingDateFrom, "PPP") : <span>تاريخ القيد (من)</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={filterFilingDateFrom} onSelect={setFilterFilingDateFrom} initialFocus />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterFilingDateTo ? format(filterFilingDateTo, "PPP") : <span>تاريخ القيد (إلى)</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={filterFilingDateTo} onSelect={setFilterFilingDateTo} initialFocus />
+              </PopoverContent>
+            </Popover>
+            <Button onClick={clearFilters} variant="outline">مسح الفلاتر</Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>قائمة القضايا</CardTitle>
           <CardDescription>
             هنا قائمة بجميع القضايا المسجلة في النظام.
           </CardDescription>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="ابحث برقم القضية، الموكل، النوع..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-8"
-              />
-            </div>
-            <Select value={filterCaseType} onValueChange={setFilterCaseType}>
-              <SelectTrigger>
-                <SelectValue placeholder="فلتر حسب نوع القضية" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
-                <SelectItem value="جنائية">جنائية</SelectItem>
-                <SelectItem value="مدنية">مدنية</SelectItem>
-                <SelectItem value="تجارية">تجارية</SelectItem>
-                <SelectItem value="إدارية">إدارية</SelectItem>
-                <SelectItem value="عمالية">عمالية</SelectItem>
-                <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="فلتر حسب المحكمة"
-              value={filterCourt}
-              onChange={(e) => setFilterCourt(e.target.value)}
-            />
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="فلتر حسب الحالة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
-                <SelectItem value="جديدة">جديدة</SelectItem>
-                <SelectItem value="قيد النظر">قيد النظر</SelectItem>
-                <SelectItem value="مكتملة">مكتملة</SelectItem>
-                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
-                <SelectItem value="منقوضة">منقوضة</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterClientId} onValueChange={setFilterClientId} disabled={isLoadingClients}>
-              <SelectTrigger>
-                <SelectValue placeholder="فلتر حسب الموكل" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">الكل</SelectItem> {/* Changed value to "all" */}
-                {clients?.map(client => (
-                  <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !filterFilingDateFrom && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="ml-2 h-4 w-4" />
-                  {filterFilingDateFrom ? format(filterFilingDateFrom, "PPP") : "تاريخ رفع الدعوى من"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={filterFilingDateFrom}
-                  onSelect={setFilterFilingDateFrom}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !filterFilingDateTo && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="ml-2 h-4 w-4" />
-                  {filterFilingDateTo ? format(filterFilingDateTo, "PPP") : "تاريخ رفع الدعوى إلى"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={filterFilingDateTo}
-                  onSelect={setFilterFilingDateTo}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Button onClick={handleClearFilters} variant="outline" className="col-span-full lg:col-span-1">
-              <FilterIcon className="ml-2 h-4 w-4" />
-              مسح الفلاتر
-            </Button>
-          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -266,64 +227,68 @@ const Cases = () => {
           ) : isError ? (
             <div className="text-red-500 text-center py-4">
               حدث خطأ أثناء جلب البيانات.
-              {error && <p className="text-sm mt-2">الخطأ: {error.message}</p>} {/* Display actual error */}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>رقم القضية</TableHead>
-                  <TableHead>الموكل</TableHead>
-                  <TableHead>نوع القضية</TableHead>
-                  <TableHead>المحكمة</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cases && cases.length > 0 ? (
-                  cases.map((caseItem) => (
-                    <TableRow key={caseItem.id}>
-                      <TableCell className="font-medium">
-                        <Link to={`/cases/${caseItem.id}`} className="hover:underline text-primary">
-                          {caseItem.case_number}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{caseItem.client_name}</TableCell>
-                      <TableCell>{caseItem.case_type}</TableCell>
-                      <TableCell>{caseItem.court}</TableCell>
-                      <TableCell>
-                        <Badge>{caseItem.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">رقم القضية</TableHead>
+                    <TableHead className="text-right">الموكل</TableHead>
+                    <TableHead className="text-right">نوع القضية</TableHead>
+                    <TableHead className="text-right">جهة التقاضي</TableHead>
+                    <TableHead className="text-right">تاريخ القيد</TableHead>
+                    <TableHead className="text-right">الحالة</TableHead>
+                    <TableHead className="text-right">الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cases && cases.length > 0 ? (
+                    cases.map((caseItem) => (
+                      <TableRow key={caseItem.id}>
+                        <TableCell className="font-medium text-right">{caseItem.case_number}</TableCell>
+                        <TableCell className="text-right">{caseItem.clients?.full_name || "-"}</TableCell>
+                        <TableCell className="text-right">{caseItem.case_type}</TableCell>
+                        <TableCell className="text-right">{caseItem.court}</TableCell>
+                        <TableCell className="text-right">
+                          {caseItem.filing_date ? format(new Date(caseItem.filing_date), "PPP") : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">{caseItem.status || "جديدة"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center space-x-2 space-x-reverse justify-end">
+                            <Link to={`/cases/${caseItem.id}`}>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        لا يوجد قضايا لعرضها.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      {searchTerm || filterCaseType || filterCourt || filterStatus || filterFilingDateFrom || filterFilingDateTo || filterClientId ? "لم يتم العثور على نتائج مطابقة للفلاتر." : "لا يوجد قضايا لعرضها."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <CaseSheet 
         open={isSheetOpen} 
-        onOpenChange={setIsSheetOpen} 
-        caseItem={editingCase}
+        onOpenChange={setIsSheetOpen}
+        caseData={editingCase}
       />
       <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
