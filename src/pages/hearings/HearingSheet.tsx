@@ -14,6 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Hearing = {
   id: string;
+  case_id: string; // Added case_id to type
+  hearing_date: string;
+  room?: string | null;
+  judge?: string | null;
+  result?: string | null;
+  notes?: string | null;
   [key: string]: any;
 };
 
@@ -30,9 +36,9 @@ export const HearingSheet = ({ open, onOpenChange, hearing }: HearingSheetProps)
   const queryClient = useQueryClient();
   const isEditMode = !!hearing;
 
-  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForHearingForm[]>({ // Corrected: Explicitly type cases
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForHearingForm[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases(), // Corrected: Wrap getCases in an arrow function
+    queryFn: () => getCases(),
   });
 
   const createMutation = useMutation({
@@ -70,6 +76,7 @@ export const HearingSheet = ({ open, onOpenChange, hearing }: HearingSheetProps)
   const defaultValues = hearing ? {
     ...hearing,
     hearing_date: hearing.hearing_date ? new Date(hearing.hearing_date) : undefined,
+    case_id: hearing.case_id || undefined, // Ensure case_id is passed correctly
   } : {};
 
   return (

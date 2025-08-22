@@ -30,6 +30,7 @@ type HearingData = {
   case_number?: string;
   client_name?: string;
   room?: string | null;
+  case_id?: string; // Added case_id as optional
   [key: string]: any;
 };
 
