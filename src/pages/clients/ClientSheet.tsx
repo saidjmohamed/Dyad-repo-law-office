@@ -14,11 +14,11 @@ import { showSuccess, showError } from "@/utils/toast";
 type Client = {
   id: string;
   full_name: string;
-  national_id?: string | undefined; // Changed from null to undefined
-  phone?: string | undefined; // Changed from null to undefined
-  email?: string | undefined; // Changed from null to undefined
-  address?: string | undefined; // Changed from null to undefined
-  notes?: string | undefined; // Changed from null to undefined
+  national_id?: string | null; // Changed to allow null
+  phone?: string | null; // Changed to allow null
+  email?: string | null; // Changed to allow null
+  address?: string | null; // Changed to allow null
+  notes?: string | null; // Changed to allow null
 };
 
 interface ClientSheetProps {

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays } from "lucide-react";
+import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -9,6 +9,7 @@ const navigation = [
   { name: "الجلسات", href: "/hearings", icon: CalendarClock },
   { name: "المهام", href: "/tasks", icon: ListTodo },
   { name: "التقويم", href: "/calendar", icon: CalendarDays },
+  { name: "الإعدادات", href: "/settings", icon: Settings },
 ];
 
 interface SidebarNavProps {
