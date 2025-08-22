@@ -14,11 +14,11 @@ import { showSuccess, showError } from "@/utils/toast";
 type Client = {
   id: string;
   full_name: string;
-  national_id?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  notes?: string | null;
+  national_id?: string | undefined; // Changed from null to undefined
+  phone?: string | undefined; // Changed from null to undefined
+  email?: string | undefined; // Changed from null to undefined
+  address?: string | undefined; // Changed from null to undefined
+  notes?: string | undefined; // Changed from null to undefined
 };
 
 interface ClientSheetProps {
@@ -78,7 +78,7 @@ export const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) =>
           <ClientForm
             onSubmit={handleSubmit}
             isPending={createMutation.isPending || updateMutation.isPending}
-            defaultValues={client || undefined} // Corrected: Pass undefined
+            defaultValues={client || undefined}
           />
         </div>
       </SheetContent>
