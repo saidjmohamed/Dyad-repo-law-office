@@ -64,11 +64,16 @@ export const getCases = async (): Promise<CaseWithClientName[]> => {
   }
 
   // Map the data to ensure client_name is always a string
-  return data.map(c => ({
-    id: c.id,
-    case_number: c.case_number,
-    client_name: c.clients ? (c.clients as { full_name: string }).full_name : 'غير معروف', // Provide a default string
-  }));
+  return data.map(c => {
+    // Supabase might return a single related record as an object or an array with one item.
+    // This handles both cases safely.
+    const client = Array.isArray(c.clients) ? c.clients[0] : c.clients;
+    return {
+      id: c.id,
+      case_number: c.case_number,
+      client_name: client?.full_name || 'غير معروف',
+    };
+  });
 };
 
 export const createHearing = async (hearingData: HearingFormData) => {
