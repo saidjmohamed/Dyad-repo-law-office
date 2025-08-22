@@ -39,7 +39,10 @@ interface HearingFormProps {
 export const HearingForm = ({ onSubmit, isPending, cases, defaultValues }: HearingFormProps) => {
   const form = useForm<HearingFormData>({
     resolver: zodResolver(hearingSchema),
-    defaultValues: defaultValues || {},
+    defaultValues: {
+      ...defaultValues,
+      case_id: defaultValues?.case_id || "", // Ensure case_id is a string for Select component
+    },
   });
 
   return (
@@ -51,13 +54,17 @@ export const HearingForm = ({ onSubmit, isPending, cases, defaultValues }: Heari
           render={({ field }) => (
             <FormItem>
               <FormLabel>القضية</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => field.onChange(value === "" ? null : value)} // Convert empty string back to null
+                value={field.value || ""}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر قضية..." />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value=""><em>بدون قضية</em></SelectItem> {/* Option for no case */}
                   {cases.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.case_number} ({c.client_name})

@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Hearing = {
   id: string;
-  case_id: string; // Added case_id to type
+  case_id?: string; // Changed to optional
   hearing_date: string;
   room?: string | null;
   judge?: string | null;
