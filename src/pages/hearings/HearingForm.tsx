@@ -41,7 +41,7 @@ export const HearingForm = ({ onSubmit, isPending, cases, defaultValues }: Heari
     resolver: zodResolver(hearingSchema),
     defaultValues: {
       ...defaultValues,
-      case_id: defaultValues?.case_id || "", // Ensure case_id is a string for Select component
+      case_id: defaultValues?.case_id ?? null,
     },
   });
 
