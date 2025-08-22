@@ -11,6 +11,8 @@ import arLocale from '@fullcalendar/core/locales/ar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarPlus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { showSuccess, showError } from '@/utils/toast';
 
 const CalendarPage = () => {
   const navigate = useNavigate();
@@ -62,10 +64,25 @@ const CalendarPage = () => {
     }
   };
 
-  const handleConnectGoogleCalendar = () => {
-    // TODO: Implement Google Calendar OAuth flow
-    console.log("Connecting to Google Calendar...");
-    alert("سيتم ربط تقويم Google قريباً!");
+  const handleConnectGoogleCalendar = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-oauth-init', {
+        method: 'GET',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error("لم يتم الحصول على رابط المصادقة من Google.");
+      }
+    } catch (error: any) {
+      showError(`فشل ربط تقويم Google: ${error.message}`);
+      console.error("Error connecting to Google Calendar:", error);
+    }
   };
   
   const isLoading = isLoadingHearings || isLoadingTasks;
