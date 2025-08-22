@@ -69,12 +69,7 @@ export const getCaseById = async (id: string) => {
     .from("cases")
     .select(`
       *,
-      clients(*),
-      hearings(*),
-      tasks(*),
-      documents(*),
-      notes(*),
-      financial_transactions(*)
+      clients(*)
     `)
     .eq("id", id)
     .single();
