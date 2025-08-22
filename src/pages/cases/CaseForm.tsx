@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { caseSchema, CaseFormData } from "./actions";
@@ -31,12 +31,15 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
   });
 
   const selectedCourt = form.watch("court");
+  const prevCourtRef = useRef<string | undefined>();
 
   useEffect(() => {
-    if (selectedCourt) {
+    // Only reset the division if the court has actually been changed by the user
+    if (prevCourtRef.current !== undefined && selectedCourt !== prevCourtRef.current) {
       form.setValue("division", "");
     }
-  }, [selectedCourt, form.setValue]);
+    prevCourtRef.current = selectedCourt;
+  }, [selectedCourt, form]);
 
   const divisions =
     selectedCourt === judicialStructure.tribunal.title
@@ -47,7 +50,7 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="client_id"
@@ -139,7 +142,7 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {divisions.map((division: string) => (
+                  {divisions.map((division) => (
                     <SelectItem key={division} value={division}>
                       {division}
                     </SelectItem>
@@ -261,7 +264,7 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
           )}
         />
 
-        <Button type="submit" disabled={isPending}>
+        <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending}>
           {isPending ? "جاري الحفظ..." : "حفظ"}
         </Button>
       </form>
