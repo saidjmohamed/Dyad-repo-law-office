@@ -11,10 +11,66 @@ import { cn } from "@/lib/utils";
 import { CaseDocuments } from "./CaseDocuments";
 import { CaseFinancials } from "./CaseFinancials";
 
+// Define types for nested data structures
+type ClientDetails = {
+  id: string;
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+};
+
+type HearingDetails = {
+  id: string;
+  hearing_date: string;
+  result?: string | null;
+  created_at: string;
+};
+
+type TaskDetails = {
+  id: string;
+  title: string;
+  done: boolean;
+  due_date?: string | null;
+  created_at: string;
+};
+
+type CaseFile = { // Renamed from CaseFileDetails to match CaseDocuments prop type
+  id: string;
+  file_name: string;
+  file_path: string;
+  mime_type?: string | null;
+  size: number;
+  uploaded_at: string;
+};
+
+type FinancialTransaction = { // Renamed from FinancialTransactionDetails to match CaseFinancials prop type
+  id: string;
+  transaction_type: 'أتعاب' | 'مصروف';
+  description: string;
+  amount: number;
+  transaction_date: string;
+};
+
+type CaseDetailsData = {
+  id: string;
+  case_number: string;
+  status: string;
+  case_type: string;
+  court: string;
+  filing_date?: string | null;
+  notes?: string | null;
+  clients: ClientDetails;
+  hearings: HearingDetails[];
+  tasks: TaskDetails[];
+  case_files: CaseFile[]; // Updated type
+  financial_transactions: FinancialTransaction[]; // Updated type
+};
+
+
 const CaseDetails = () => {
   const { caseId } = useParams<{ caseId: string }>();
 
-  const { data: caseDetails, isLoading, isError, error } = useQuery({
+  const { data: caseDetails, isLoading, isError, error } = useQuery<CaseDetailsData>({
     queryKey: ["case", caseId],
     queryFn: () => getCaseById(caseId!),
     enabled: !!caseId,
@@ -104,7 +160,7 @@ const CaseDetails = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {hearings.map(hearing => (
+                  {hearings.map((hearing: HearingDetails) => (
                     <TableRow key={hearing.id}>
                       <TableCell>{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
                       <TableCell>{hearing.result || "-"}</TableCell>
@@ -126,7 +182,7 @@ const CaseDetails = () => {
           <CardContent>
             {tasks && tasks.length > 0 ? (
               <div className="space-y-2">
-                {tasks.map(task => (
+                {tasks.map((task: TaskDetails) => (
                   <div key={task.id} className={cn("flex items-center text-sm", task.done && "text-muted-foreground line-through")}>
                     <CheckSquare className="w-4 h-4 ml-2" />
                     <span>{task.title}</span>

@@ -73,6 +73,62 @@ export const getCases = async (filters?: GetCasesFilters) => {
   }));
 };
 
+// Define types for nested data structures
+type ClientDetails = {
+  id: string;
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+};
+
+type HearingDetails = {
+  id: string;
+  hearing_date: string;
+  result?: string | null;
+  created_at: string;
+};
+
+type TaskDetails = {
+  id: string;
+  title: string;
+  done: boolean;
+  due_date?: string | null;
+  created_at: string;
+};
+
+type CaseFileDetails = {
+  id: string;
+  file_name: string; // Added missing properties
+  file_path: string; // Added missing properties
+  mime_type?: string | null;
+  size: number; // Added missing properties
+  uploaded_at: string;
+};
+
+type FinancialTransactionDetails = {
+  id: string;
+  transaction_type: 'أتعاب' | 'مصروف'; // Added missing properties
+  description: string; // Added missing properties
+  amount: number; // Added missing properties
+  transaction_date: string;
+};
+
+type CaseDetailsData = {
+  id: string;
+  case_number: string;
+  status: string;
+  case_type: string;
+  court: string;
+  filing_date?: string | null;
+  notes?: string | null;
+  clients: ClientDetails;
+  hearings: HearingDetails[];
+  tasks: TaskDetails[];
+  case_files: CaseFileDetails[];
+  financial_transactions: FinancialTransactionDetails[];
+};
+
+
 export const getCaseById = async (id: string) => {
   const { data, error } = await supabase
     .from("cases")
@@ -94,19 +150,19 @@ export const getCaseById = async (id: string) => {
   }
 
   if (data.hearings) {
-    data.hearings.sort((a, b) => new Date(b.hearing_date).getTime() - new Date(a.hearing_date).getTime());
+    data.hearings.sort((a: HearingDetails, b: HearingDetails) => new Date(b.hearing_date).getTime() - new Date(a.hearing_date).getTime());
   }
   if (data.tasks) {
-    data.tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    data.tasks.sort((a: TaskDetails, b: TaskDetails) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   if (data.case_files) {
-    data.case_files.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+    data.case_files.sort((a: CaseFileDetails, b: CaseFileDetails) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
   }
   if (data.financial_transactions) {
-    data.financial_transactions.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+    data.financial_transactions.sort((a: FinancialTransactionDetails, b: FinancialTransactionDetails) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
   }
 
-  return data;
+  return data as CaseDetailsData;
 };
 
 

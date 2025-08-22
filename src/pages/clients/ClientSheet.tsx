@@ -78,7 +78,7 @@ export const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) =>
           <ClientForm
             onSubmit={handleSubmit}
             isPending={createMutation.isPending || updateMutation.isPending}
-            defaultValues={client || {}}
+            defaultValues={client || undefined} // Corrected: Pass undefined
           />
         </div>
       </SheetContent>
