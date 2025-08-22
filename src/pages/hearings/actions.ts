@@ -24,10 +24,10 @@ export const getHearings = async () => {
     .from("hearings")
     .select(`
       *,
-      cases (
+      case:cases (
         id,
         case_number,
-        clients (
+        client:clients (
           full_name
         )
       )
@@ -39,10 +39,10 @@ export const getHearings = async () => {
     throw new Error("لا يمكن جلب قائمة الجلسات.");
   }
 
-  return data.map(h => ({
+  return data.map((h: any) => ({
     ...h,
-    case_number: h.cases?.case_number,
-    client_name: h.cases?.clients?.full_name,
+    case_number: h.case?.case_number,
+    client_name: h.case?.client?.full_name,
   }));
 };
 
@@ -52,7 +52,7 @@ export const getCases = async (): Promise<CaseWithClientName[]> => {
     .select(`
       id,
       case_number,
-      clients (
+      client:clients (
         full_name
       )
     `)
@@ -64,16 +64,11 @@ export const getCases = async (): Promise<CaseWithClientName[]> => {
   }
 
   // Map the data to ensure client_name is always a string
-  return data.map(c => {
-    // Supabase might return a single related record as an object or an array with one item.
-    // This handles both cases safely.
-    const client = Array.isArray(c.clients) ? c.clients[0] : c.clients;
-    return {
-      id: c.id,
-      case_number: c.case_number,
-      client_name: client?.full_name || 'غير معروف',
-    };
-  });
+  return data.map((c: any) => ({
+    id: c.id,
+    case_number: c.case_number,
+    client_name: c.client ? c.client.full_name : 'غير معروف',
+  }));
 };
 
 export const createHearing = async (hearingData: HearingFormData) => {
