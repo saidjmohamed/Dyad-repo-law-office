@@ -64,7 +64,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{caseData ? "تعديل قضية" : "إضافة قضية جديدة"}</SheetTitle>
           <SheetDescription>
