@@ -114,45 +114,47 @@ const Hearings = () => {
               حدث خطأ أثناء جلب البيانات.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>تاريخ الجلسة</TableHead>
-                  <TableHead>رقم القضية</TableHead>
-                  <TableHead>الموكل</TableHead>
-                  <TableHead>القاعة</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hearings && hearings.length > 0 ? (
-                  hearings.map((hearing) => (
-                    <TableRow key={hearing.id}>
-                      <TableCell>{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
-                      <TableCell className="font-medium">{hearing.case_number}</TableCell>
-                      <TableCell>{hearing.client_name}</TableCell>
-                      <TableCell>{hearing.room || "-"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(hearing)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(hearing.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
+            <div className="overflow-x-auto"> {/* Added overflow-x-auto */}
+              <Table className="min-w-full"> {/* Added min-w-full */}
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">تاريخ الجلسة</TableHead>
+                    <TableHead className="text-right">رقم القضية</TableHead>
+                    <TableHead className="text-right">الموكل</TableHead>
+                    <TableHead className="text-right">القاعة</TableHead>
+                    <TableHead className="text-right">الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {hearings && hearings.length > 0 ? (
+                    hearings.map((hearing) => (
+                      <TableRow key={hearing.id}>
+                        <TableCell className="text-right">{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
+                        <TableCell className="font-medium text-right">{hearing.case_number}</TableCell>
+                        <TableCell className="text-right">{hearing.client_name}</TableCell>
+                        <TableCell className="text-right">{hearing.room || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center space-x-2 space-x-reverse justify-end"> {/* Added justify-end */}
+                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(hearing)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(hearing.id)}>
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        لا يوجد جلسات لعرضها.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      لا يوجد جلسات لعرضها.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
