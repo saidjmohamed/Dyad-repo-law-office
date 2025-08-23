@@ -7,18 +7,19 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { HearingForm } from "./HearingForm";
-import { createHearing, updateHearing, getCases, HearingFormData, CaseWithClientName } from "./actions"; // Corrected import for HearingFormData and CaseWithClientName
+import { createHearing, updateHearing, getCases, HearingFormData, CaseWithClientName } from "./actions";
 import { showSuccess, showError } from "@/utils/toast";
 
 interface HearingSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hearing?: { id: string; case_id?: string | null; hearing_date: string; room?: string | null; judge?: string | null; result?: string | null; notes?: string | null } | null;
+  caseIdForNewHearing?: string; // New prop to pass caseId when creating a new hearing
 }
 
-export const HearingSheet = ({ open, onOpenChange, hearing }: HearingSheetProps) => {
+export const HearingSheet = ({ open, onOpenChange, hearing, caseIdForNewHearing }: HearingSheetProps) => {
   const queryClient = useQueryClient();
-  const { data: cases, isLoading: isLoadingCases, isError: isErrorCases } = useQuery<CaseWithClientName[]>({ // Use CaseWithClientName type
+  const { data: cases, isLoading: isLoadingCases, isError: isErrorCases } = useQuery<CaseWithClientName[]>({
     queryKey: ["cases"],
     queryFn: getCases,
   });
@@ -51,19 +52,26 @@ export const HearingSheet = ({ open, onOpenChange, hearing }: HearingSheetProps)
     if (hearing) {
       updateMutation.mutate({ id: hearing.id, ...data });
     } else {
-      createMutation.mutate(data);
+      // When creating, ensure case_id is set from caseIdForNewHearing if available
+      createMutation.mutate({ ...data, case_id: caseIdForNewHearing || data.case_id });
     }
   };
 
   const defaultValues = hearing ? {
     ...hearing,
     hearing_date: new Date(hearing.hearing_date),
-    // Convert null to undefined for fields that expect string | undefined
     room: hearing.room ?? undefined,
     judge: hearing.judge ?? undefined,
     result: hearing.result ?? undefined,
     notes: hearing.notes ?? undefined,
-  } : undefined;
+  } : {
+    case_id: caseIdForNewHearing || null, // Pre-fill case_id for new hearings
+    hearing_date: new Date(), // Default to today for new hearings
+    room: undefined,
+    judge: undefined,
+    result: undefined,
+    notes: undefined,
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

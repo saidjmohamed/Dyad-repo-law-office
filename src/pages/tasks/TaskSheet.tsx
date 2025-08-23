@@ -14,7 +14,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Task = {
   id: string;
-  [key: string]: any;
+  title: string;
+  done: boolean;
+  due_date: string | null;
+  priority: string | null;
+  case_id: string | null; // Make case_id nullable
 };
 
 // Define a type for cases data expected by TaskForm
@@ -24,15 +28,16 @@ interface TaskSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
+  caseIdForNewTask?: string; // New prop to pass caseId when creating a new task
 }
 
-export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
+export const TaskSheet = ({ open, onOpenChange, task, caseIdForNewTask }: TaskSheetProps) => {
   const queryClient = useQueryClient();
   const isEditMode = !!task;
 
-  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForTaskForm[]>({ // Corrected: Explicitly type cases
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForTaskForm[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases(), // Corrected: Wrap getCases in an arrow function
+    queryFn: () => getCases(),
   });
 
   const createMutation = useMutation({
@@ -67,14 +72,23 @@ export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
     if (isEditMode) {
       updateMutation.mutate({ id: task.id, ...submissionData });
     } else {
-      createMutation.mutate(submissionData);
+      // When creating, ensure case_id is set from caseIdForNewTask if available
+      createMutation.mutate({ ...submissionData, case_id: caseIdForNewTask || submissionData.case_id });
     }
   };
 
   const defaultValues = task ? {
     ...task,
-    due_date: task.due_date ? new Date(task.due_date) : null,
-  } : {};
+    due_date: task.due_date ? new Date(task.due_date) : undefined, // Convert null to undefined for optional date
+    priority: task.priority ?? undefined, // Convert null to undefined for optional string
+    case_id: task.case_id ?? undefined, // Convert null to undefined for optional string
+  } : {
+    title: "",
+    priority: "متوسط",
+    case_id: caseIdForNewTask ?? undefined, // Ensure it's undefined if null
+    due_date: undefined, // Default to undefined for new tasks
+    done: false,
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -93,8 +107,8 @@ export const TaskSheet = ({ open, onOpenChange, task }: TaskSheetProps) => {
                 <Skeleton className="h-10 w-full" />
             </div>
           ) : cases ? (
-            <TaskForm 
-              onSubmit={handleSubmit} 
+            <TaskForm
+              onSubmit={handleSubmit}
               isPending={createMutation.isPending || updateMutation.isPending}
               cases={cases.map(c => ({ id: c.id, case_number: c.case_number, client_name: c.client_name }))}
               defaultValues={defaultValues}

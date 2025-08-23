@@ -1,23 +1,16 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTasks, updateTaskStatus, deleteTask } from "./actions";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
-import { TaskSheet } from "./TaskSheet";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { Pencil, Trash2, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { showError, showSuccess } from "@/utils/toast";
+import { TaskSheet } from "../tasks/TaskSheet";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { deleteTask, updateTaskStatus } from "../tasks/actions";
+import { showError, showSuccess } from "@/utils/toast";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 type Task = {
   id: string;
@@ -25,27 +18,26 @@ type Task = {
   done: boolean;
   due_date: string | null;
   priority: string | null;
-  case_id: string | null; // Added case_id to the Task type
-  case_number: string | null;
-  [key: string]: any;
+  case_id: string | null; // Make case_id nullable
 };
 
-const Tasks = () => {
+interface CaseTasksProps {
+  caseId: string;
+  tasks: Task[];
+}
+
+export const CaseTasks = ({ caseId, tasks }: CaseTasksProps) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: tasks, isLoading, isError } = useQuery<Task[]>({
-    queryKey: ["tasks"],
-    queryFn: getTasks,
-  });
-
   const statusUpdateMutation = useMutation<any, Error, { id: string; done: boolean }>({
     mutationFn: updateTaskStatus,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] }); // Invalidate general tasks list too
       showSuccess("تم تحديث حالة المهمة.");
     },
     onError: (error) => {
@@ -56,7 +48,8 @@ const Tasks = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] }); // Invalidate general tasks list too
       showSuccess("تم حذف المهمة بنجاح.");
       setIsDeleteDialogOpen(false);
       setDeletingTaskId(null);
@@ -106,39 +99,20 @@ const Tasks = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة المهام</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            تتبع وإدارة جميع المهام المطلوبة.
-          </p>
-        </div>
-        <Button onClick={handleAddClick}>
-          <PlusCircle className="w-4 h-4 ml-2" />
-          إضافة مهمة
-        </Button>
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>قائمة المهام</CardTitle>
-          <CardDescription>
-            هنا قائمة بجميع المهام المفتوحة والمكتملة.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>المهام</CardTitle>
+            <CardDescription>جميع المهام المتعلقة بهذه القضية.</CardDescription>
+          </div>
+          <Button onClick={handleAddClick}>
+            <PlusCircle className="w-4 h-4 ml-2" />
+            إضافة مهمة
+          </Button>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : isError ? (
-            <div className="text-red-500 text-center py-4">
-              حدث خطأ أثناء جلب البيانات.
-            </div>
-          ) : tasks && tasks.length > 0 ? (
-            <div className="space-y-4">
+          {tasks && tasks.length > 0 ? (
+            <div className="space-y-2">
               {tasks.map((task) => (
                 <div key={task.id} className="flex items-center p-3 bg-background rounded-lg border">
                   <Checkbox
@@ -158,7 +132,6 @@ const Tasks = () => {
                       {task.title}
                     </label>
                     <div className="text-sm text-muted-foreground space-x-2 space-x-reverse">
-                      {task.case_number && <span>قضية: {task.case_number}</span>}
                       {task.due_date && <span>تستحق في: {format(new Date(task.due_date), "PPP")}</span>}
                     </div>
                   </div>
@@ -175,14 +148,16 @@ const Tasks = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10">
-              <p>لا يوجد مهام لعرضها. قم بإضافة مهمة جديدة!</p>
-            </div>
+            <p className="text-center text-muted-foreground py-4">لا توجد مهام مرفقة.</p>
           )}
         </CardContent>
       </Card>
-
-      <TaskSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} task={editingTask} />
+      <TaskSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        task={editingTask ? { ...editingTask, case_id: caseId } : undefined} // Pass undefined for new task
+        caseIdForNewTask={caseId} // Pass caseId for new tasks
+      />
       <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -192,5 +167,3 @@ const Tasks = () => {
     </>
   );
 };
-
-export default Tasks;
