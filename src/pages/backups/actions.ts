@@ -30,13 +30,16 @@ export const createBackup = async (format: BackupFormat, tables: BackupTable[]):
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("المستخدم غير مسجل الدخول");
 
+  const requestBody = { format, tables };
+  console.log("Frontend: Sending backup request with body:", requestBody); // سجل تصحيح جديد
+
   const { data, error } = await supabase.functions.invoke('create-backup', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: { format, tables },
+    body: requestBody,
   });
 
   if (error) {
