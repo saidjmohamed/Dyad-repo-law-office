@@ -207,22 +207,24 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
             render={({ field }) => (
               <FormItem>
                 <FormLabel>الموكل</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                <Select
+                  onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                  value={field.value || "none"} // تعيين القيمة الافتراضية لـ "none" إذا كانت null
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر موكلاً (اختياري)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {/* isLoadingClients تم إزالته هنا لأن clients يتم تمريرها كـ prop */}
-                      <>
-                        <SelectItem value="">لا يوجد موكل</SelectItem>
-                        {clients?.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.full_name}
-                          </SelectItem>
-                        ))}
-                      </>
+                    <>
+                      <SelectItem value="none">لا يوجد موكل</SelectItem> {/* تغيير القيمة إلى "none" */}
+                      {clients?.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.full_name}
+                        </SelectItem>
+                      ))}
+                    </>
                   </SelectContent>
                 </Select>
                 <FormMessage />
