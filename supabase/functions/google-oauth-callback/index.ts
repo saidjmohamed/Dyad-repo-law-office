@@ -13,7 +13,16 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = Deno.env.toObject();
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_URL } = Deno.env.toObject();
+    
+    if (!SITE_URL) {
+      console.error("SITE_URL environment variable is not set.");
+      return new Response(JSON.stringify({ error: "Application is not configured correctly. Missing SITE_URL." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const error = url.searchParams.get('error');
@@ -91,12 +100,13 @@ serve(async (req: Request) => {
       return new Response(`Error storing tokens: ${dbError.message}`, { status: 500 });
     }
 
-    const redirectUrl = new URL(req.url);
-    const appBaseUrl = `${redirectUrl.protocol}//${redirectUrl.host}`;
+    const redirectLocation = `${SITE_URL}/calendar?google_auth_success=true`;
+    console.log(`Redirecting to: ${redirectLocation}`);
+
     return new Response(null, {
       status: 303,
       headers: {
-        'Location': `${appBaseUrl}/calendar?google_auth_success=true`,
+        'Location': redirectLocation,
         ...corsHeaders,
       },
     });
