@@ -74,13 +74,7 @@ serve(async (req: Request) => {
       console.log("create-backup: Successfully parsed request body:", JSON.stringify(requestBody));
     } catch (jsonError) {
       console.error("create-backup: Error parsing request JSON:", (jsonError as Error).message);
-      // Attempt to read raw body for more context if JSON parsing failed
-      try {
-        const rawBody = await req.text();
-        console.error("create-backup: Raw request body (if available):", rawBody);
-      } catch (readError) {
-        console.error("create-backup: Could not read raw body:", (readError as Error).message);
-      }
+      // Removed the attempt to read raw body here to prevent "Body already consumed" error.
       return new Response(JSON.stringify({ error: `Failed to parse request body: ${(jsonError as Error).message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -213,7 +207,6 @@ serve(async (req: Request) => {
 
     if (insertError) {
       console.error('create-backup: Error inserting backup metadata:', insertError);
-      // Attempt to delete the uploaded file to prevent orphans
       await createClient(
         // @ts-ignore
         Deno.env.get('SUPABASE_URL'),
