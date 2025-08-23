@@ -14,7 +14,7 @@ import CaseDetails from "./pages/cases/CaseDetails";
 import Hearings from "./pages/hearings/Hearings";
 import Tasks from "./pages/tasks/Tasks";
 import CalendarPage from "./pages/calendar/CalendarPage";
-import Settings from "./pages/Settings";
+import Settings from "./pages/settings/Settings";
 import DocumentTemplates from "./pages/DocumentTemplates"; // استيراد صفحة قوالب الوثائق
 
 const queryClient = new QueryClient();
