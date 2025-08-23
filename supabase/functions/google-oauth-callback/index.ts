@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL, SUPABASE_URL, SUPABASE_ANON_KEY } = Deno.env.toObject();
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = Deno.env.toObject();
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const error = url.searchParams.get('error');
@@ -61,7 +61,7 @@ serve(async (req) => {
     const userEmail = userInfo.email;
 
     // Initialize Supabase client with service role key to bypass RLS for this operation
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -70,12 +70,14 @@ serve(async (req) => {
     });
 
     // Get the user from Supabase auth.users table using their email
-    const { data: { user: supabaseUser }, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(userEmail);
+    const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers({ email: userEmail });
 
-    if (userError || !supabaseUser) {
+    if (userError || !users || users.length === 0) {
       console.error('Error fetching Supabase user by email:', userError?.message || 'User not found');
       return new Response('Supabase user not found for the authenticated Google account.', { status: 404 });
     }
+
+    const supabaseUser = users[0];
 
     // Store tokens in user_integrations table
     const { error: dbError } = await supabaseAdmin
@@ -97,10 +99,12 @@ serve(async (req) => {
 
     // Redirect back to the application's calendar page
     // You might want to pass a success message or status
+    const redirectUrl = new URL(req.url);
+    const appBaseUrl = `${redirectUrl.protocol}//${redirectUrl.host}`;
     return new Response(null, {
       status: 303, // See Other
       headers: {
-        'Location': `${url.origin}/calendar?google_auth_success=true`, // Redirect to your app's calendar page
+        'Location': `${appBaseUrl}/calendar?google_auth_success=true`, // Redirect to your app's calendar page
         ...corsHeaders,
       },
     });
