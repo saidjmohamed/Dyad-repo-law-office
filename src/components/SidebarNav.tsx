@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays, Settings, FileText } from "lucide-react"; // استيراد FileText
+import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays, Settings, FileText, Database } from "lucide-react"; // استيراد Database
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -9,7 +9,8 @@ const navigation = [
   { name: "الجلسات", href: "/hearings", icon: CalendarClock },
   { name: "المهام", href: "/tasks", icon: ListTodo },
   { name: "التقويم", href: "/calendar", icon: CalendarDays },
-  { name: "قوالب الوثائق", href: "/document-templates", icon: FileText }, // إضافة رابط جديد
+  { name: "قوالب الوثائق", href: "/document-templates", icon: FileText },
+  { name: "النسخ الاحتياطية", href: "/backups", icon: Database }, // إضافة رابط جديد
   { name: "الإعدادات", href: "/settings", icon: Settings },
 ];
 
