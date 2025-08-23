@@ -8,9 +8,7 @@ export const TABLES_TO_BACKUP = [
   'notes',
   'case_files',
   'profiles',
-  'user_integrations',
 ];
 
-export const BACKUPS_BUCKET = 'backups';
 export const AVATARS_BUCKET = 'avatars';
 export const CASE_DOCUMENTS_BUCKET = 'case_documents';

@@ -16,7 +16,6 @@ import Tasks from "./pages/tasks/Tasks";
 import CalendarPage from "./pages/calendar/CalendarPage";
 import Settings from "./pages/settings/Settings";
 import DocumentTemplates from "./pages/DocumentTemplates";
-import Backups from "./pages/backups/Backups"; // تم تصحيح مسار الاستيراد
 
 const queryClient = new QueryClient();
 
@@ -44,7 +43,6 @@ const App = () => (
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/document-templates" element={<DocumentTemplates />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/backups" element={<Backups />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
