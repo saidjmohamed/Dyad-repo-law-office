@@ -14,7 +14,8 @@ import CaseDetails from "./pages/cases/CaseDetails";
 import Hearings from "./pages/hearings/Hearings";
 import Tasks from "./pages/tasks/Tasks";
 import CalendarPage from "./pages/calendar/CalendarPage";
-import Settings from "./pages/Settings"; // Import the new Settings page
+import Settings from "./pages/Settings";
+import DocumentTemplates from "./pages/DocumentTemplates"; // استيراد صفحة قوالب الوثائق
 
 const queryClient = new QueryClient();
 
@@ -40,7 +41,8 @@ const App = () => (
             <Route path="/hearings" element={<Hearings />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/settings" element={<Settings />} /> {/* Add the new route */}
+            <Route path="/document-templates" element={<DocumentTemplates />} /> {/* إضافة المسار الجديد */}
+            <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

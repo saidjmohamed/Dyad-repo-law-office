@@ -1,14 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Briefcase, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { professionalInfo } from "@/data/professionalInfo"; // استيراد المعلومات المهنية
 
 const Settings = () => {
-  const professionalInfo = {
-    name: "محمد سايج",
-    title: "محام لدى مجلس قضاء الجزائر",
-    address: "12 شارع الإخوة الثلاثة بوعدو، بئر مراد رايس، الجزائر",
-  };
-
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">الإعدادات</h1>
