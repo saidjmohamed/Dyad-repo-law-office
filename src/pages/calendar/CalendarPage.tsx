@@ -18,20 +18,28 @@ const CalendarPage = () => {
   const navigate = useNavigate();
   const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [supabaseAccessToken, setSupabaseAccessToken] = useState<string | null>(null); // حالة لتخزين رمز الوصول الخاص بـ Supabase
   const queryClient = useQueryClient();
 
-  // Fetch user ID on component mount
+  // جلب معرف المستخدم ورمز الوصول الخاص بـ Supabase عند تحميل المكون
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
+    const fetchUserAndToken = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserId(session?.user?.id || null);
+      setSupabaseAccessToken(session?.access_token || null);
     };
-    fetchUser();
+
+    fetchUserAndToken();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id || null);
+      setSupabaseAccessToken(session?.access_token || null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Check if Google Calendar is already connected
+  // التحقق مما إذا كان تقويم Google متصلاً بالفعل
   useEffect(() => {
     const checkConnection = async () => {
       if (userId) {
@@ -50,13 +58,13 @@ const CalendarPage = () => {
     checkConnection();
   }, [userId]);
 
-  // Handle redirect after Google OAuth
+  // التعامل مع إعادة التوجيه بعد مصادقة Google OAuth
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('google_auth_success') === 'true') {
       showSuccess("تم ربط تقويم Google بنجاح!");
       setIsGoogleCalendarConnected(true);
-      // Clean up URL
+      // تنظيف عنوان URL
       urlParams.delete('google_auth_success');
       navigate({ search: urlParams.toString() }, { replace: true });
     }
@@ -73,18 +81,22 @@ const CalendarPage = () => {
   });
 
   const { data: googleEvents, isLoading: isLoadingGoogleEvents, refetch: refetchGoogleEvents } = useQuery({
-    queryKey: ['googleEvents', userId],
+    queryKey: ['googleEvents', userId, supabaseAccessToken], // إضافة supabaseAccessToken إلى مفتاح الاستعلام
     queryFn: async () => {
-      if (!userId || !isGoogleCalendarConnected) return [];
+      if (!userId || !isGoogleCalendarConnected || !supabaseAccessToken) return []; // التأكد من توفر الرمز المميز
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAccessToken}`, // إضافة رأس المصادقة
+          'Content-Type': 'application/json',
+        },
         body: { user_id: userId },
       });
 
       if (error) {
         console.error('Error fetching Google Calendar events:', error);
         showError(`فشل جلب أحداث تقويم Google: ${error.message}`);
-        // If token refresh failed, disconnect Google Calendar
+        // إذا فشل تحديث الرمز المميز، افصل تقويم Google
         if (error.message.includes('re-authenticate')) {
           setIsGoogleCalendarConnected(false);
         }
@@ -92,7 +104,7 @@ const CalendarPage = () => {
       }
       return data.events;
     },
-    enabled: !!userId && isGoogleCalendarConnected, // Only run if user is logged in and connected
+    enabled: !!userId && isGoogleCalendarConnected && !!supabaseAccessToken, // تشغيل الاستعلام فقط إذا كان المستخدم مسجلاً للدخول ومتصلاً ولديه رمز مميز
   });
 
   const events = useMemo(() => {
@@ -132,7 +144,7 @@ const CalendarPage = () => {
   }, [hearings, tasks, googleEvents, isGoogleCalendarConnected]);
 
   const handleEventClick = (clickInfo: any) => {
-    clickInfo.jsEvent.preventDefault(); // prevent browser navigation
+    clickInfo.jsEvent.preventDefault(); // منع التنقل في المتصفح
     if (clickInfo.event.url) {
       navigate(clickInfo.event.url);
     }
@@ -140,9 +152,7 @@ const CalendarPage = () => {
 
   const handleConnectGoogleCalendar = async () => {
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
+      if (!supabaseAccessToken) {
         showError("يجب أن تكون مسجلاً للدخول لربط تقويم Google.");
         return;
       }
@@ -150,7 +160,7 @@ const CalendarPage = () => {
       const { data, error } = await supabase.functions.invoke('google-oauth-init', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${supabaseAccessToken}`, // إضافة رأس المصادقة
         },
       });
 
@@ -182,7 +192,7 @@ const CalendarPage = () => {
       }
       setIsGoogleCalendarConnected(false);
       showSuccess("تم فصل تقويم Google بنجاح.");
-      queryClient.invalidateQueries({ queryKey: ['googleEvents', userId] }); // Invalidate Google events
+      queryClient.invalidateQueries({ queryKey: ['googleEvents', userId] }); // إبطال أحداث Google
     } catch (error: any) {
       showError(`فشل فصل تقويم Google: ${error.message}`);
       console.error("Error disconnecting Google Calendar:", error);
