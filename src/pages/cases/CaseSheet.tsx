@@ -1,86 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CaseForm } from "./CaseForm";
-import { createCase, updateCase, CaseFormData } from "./actions";
-import { getClients } from "../clients/actions";
-import { showSuccess, showError } from "@/utils/toast";
-
-type CaseData = {
-  id: string;
-  [key: string]: any;
-};
+import { CaseFormData } from "./actions";
 
 interface CaseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseData?: CaseData | null;
+  caseData?: CaseFormData | null; // تم تعديل النوع للسماح بـ null
 }
 
 export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
-  const queryClient = useQueryClient();
-
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
-    queryKey: ["clients"],
-    queryFn: getClients,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createCase,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess("تمت إضافة القضية بنجاح.");
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      showError(error.message);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: updateCase,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess("تم تحديث القضية بنجاح.");
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      showError(error.message);
-    },
-  });
-
-  const onSubmit = (data: CaseFormData) => {
-    if (caseData) {
-      updateMutation.mutate({ id: caseData.id, ...data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{caseData ? "تعديل قضية" : "إضافة قضية جديدة"}</SheetTitle>
           <SheetDescription>
             {caseData ? "قم بتعديل تفاصيل القضية." : "أدخل تفاصيل القضية الجديدة هنا."}
           </SheetDescription>
         </SheetHeader>
-        {isLoadingClients ? (
-          <div>جاري تحميل الموكلين...</div>
-        ) : (
-          <CaseForm
-            onSubmit={onSubmit}
-            isPending={createMutation.isPending || updateMutation.isPending}
-            defaultValues={caseData || {}}
-            clients={clients || []}
-          />
-        )}
+        <CaseForm initialData={caseData} onSuccess={() => onOpenChange(false)} /> {/* تمرير caseData مباشرة وتصحيح onSuccess */}
       </SheetContent>
     </Sheet>
   );

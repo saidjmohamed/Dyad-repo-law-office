@@ -1,302 +1,238 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCases, deleteCase } from "./actions";
-import { getClients } from "../clients/actions";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2, Eye } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import { showSuccess, showError } from "@/utils/toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteCase, getCases, Case as CaseData, CaseFormData } from "./actions"; // استيراد CaseFormData
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
 import { judicialStructure } from "@/data/judicialStructure";
-
-type CaseData = {
-  id: string;
-  case_type: string;
-  court: string;
-  division?: string | null;
-  case_number: string;
-  filing_date?: string | null;
-  status?: string | null;
-  clients?: { full_name: string } | null;
-  [key: string]: any;
-};
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<CaseData | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
-  
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCaseType, setFilterCaseType] = useState("");
-  const [filterCourt, setFilterCourt] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterFilingDateFrom, setFilterFilingDateFrom] = useState<Date | undefined>(undefined);
-  const [filterFilingDateTo, setFilterFilingDateTo] = useState<Date | undefined>(undefined);
-  const [filterClientId, setFilterClientId] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [filterCaseCategory, setFilterCaseCategory] = useState("");
+  const [filterDivisionOrChamber, setFilterDivisionOrChamber] = useState("");
+  const [filterAppealType, setFilterAppealType] = useState("");
 
   const queryClient = useQueryClient();
 
-  const { data: cases, isLoading, isError } = useQuery<CaseData[]>({
-    queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
-    queryFn: () => getCases({
-      searchTerm,
-      filterCaseType,
-      filterCourt,
-      filterStatus,
-      filterFilingDateFrom: filterFilingDateFrom?.toISOString(),
-      filterFilingDateTo: filterFilingDateTo?.toISOString(),
-      filterClientId,
-    }),
+  const { data: cases, isLoading } = useQuery<CaseData[]>({
+    queryKey: ["cases", globalFilter, filterCaseCategory, filterDivisionOrChamber, filterAppealType],
+    queryFn: () => getCases(filterCaseCategory, filterDivisionOrChamber, filterAppealType, globalFilter),
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ["clients"],
-    queryFn: getClients,
-  });
-
-  const deleteMutation = useMutation({
+  const deleteCaseMutation = useMutation({
     mutationFn: deleteCase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess("تم حذف القضية بنجاح.");
-      setIsDeleteDialogOpen(false);
-      setDeletingCaseId(null);
+      toast.success("تم حذف القضية بنجاح.");
     },
     onError: (error) => {
-      showError(error.message);
+      toast.error(`فشل حذف القضية: ${error.message}`);
     },
   });
 
-  const handleAddClick = () => {
-    setEditingCase(null);
-    setIsSheetOpen(true);
-  };
-
-  const handleEditClick = (caseData: CaseData) => {
+  const handleEdit = (caseData: CaseData) => {
     setEditingCase(caseData);
     setIsSheetOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    setDeletingCaseId(id);
-    setIsDeleteDialogOpen(true);
+  const handleDelete = (id: string) => {
+    deleteCaseMutation.mutate(id);
   };
 
-  const confirmDelete = () => {
-    if (deletingCaseId) {
-      deleteMutation.mutate(deletingCaseId);
-    }
-  };
+  const columns: ColumnDef<CaseData>[] = useMemo(() => [
+    {
+      accessorKey: "case_number",
+      header: "رقم القضية",
+      cell: ({ row }) => (
+        <Link to={`/cases/${row.original.id}`} className="text-primary hover:underline">
+          {row.getValue("case_number")}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "client_name",
+      header: "الموكل",
+    },
+    {
+      accessorKey: "case_type",
+      header: "نوع القضية",
+    },
+    {
+      accessorKey: "case_category",
+      header: "مدني/جزائي",
+    },
+    {
+      accessorKey: "court",
+      header: "المحكمة/المجلس",
+    },
+    {
+      accessorKey: "court_division_or_chamber",
+      header: "القسم/الغرفة",
+    },
+    {
+      accessorKey: "status",
+      header: "الحالة",
+      cell: ({ row }) => {
+        const status = row.getValue("status");
+        let variant: "default" | "secondary" | "destructive" | "outline" = "default";
+        switch (status) {
+          case "جديدة":
+            variant = "secondary";
+            break;
+          case "قيد التنفيذ":
+            variant = "default";
+            break;
+          case "مكتملة":
+            variant = "outline";
+            break;
+          case "مؤجلة":
+            variant = "destructive";
+            break;
+        }
+        return <Badge variant={variant}>{status as string}</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: "الإجراءات",
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">فتح القائمة</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>تعديل</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  حذف
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف القضية وجميع البيانات المرتبطة بها بشكل دائم.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(row.original.id)}>
+                    حذف
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ], []);
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setFilterCaseType("");
-    setFilterCourt("");
-    setFilterStatus("");
-    setFilterFilingDateFrom(undefined);
-    setFilterFilingDateTo(undefined);
-    setFilterClientId("");
-  };
+  const allDivisionsAndChambers = useMemo(() => {
+    const divisions = judicialStructure.courts.flatMap(court => court.divisions);
+    const chambers = judicialStructure.councils.flatMap(council => council.chambers);
+    return Array.from(new Set([...divisions, ...chambers]));
+  }, []);
 
   return (
-    <>
+    <div className="container mx-auto py-10">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">إدارة القضايا</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            عرض، إضافة، وتعديل بيانات القضايا.
-          </p>
+          <h1 className="text-3xl font-bold">القضايا</h1>
+          <p className="text-gray-600 dark:text-gray-400">إدارة جميع القضايا الخاصة بك.</p>
         </div>
-        <Button onClick={handleAddClick}>
-          <PlusCircle className="w-4 h-4 ml-2" />
-          إضافة قضية
+        <Button onClick={() => { setEditingCase(null); setIsSheetOpen(true); }}>
+          <PlusCircle className="ml-2 h-4 w-4" />
+          إضافة قضية جديدة
         </Button>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>تصفية القضايا</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Input
-              placeholder="ابحث برقم القضية، الموكل..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Select value={filterCaseType} onValueChange={setFilterCaseType}>
-              <SelectTrigger><SelectValue placeholder="نوع القضية" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="مدنية">مدنية</SelectItem>
-                <SelectItem value="جزائية">جزائية</SelectItem>
-                <SelectItem value="تجارية">تجارية</SelectItem>
-                <SelectItem value="إدارية">إدارية</SelectItem>
-                <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
-                <SelectItem value="عقارية">عقارية</SelectItem>
-                <SelectItem value="اجتماعية">اجتماعية</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterCourt} onValueChange={setFilterCourt}>
-              <SelectTrigger><SelectValue placeholder="جهة التقاضي" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={judicialStructure.tribunal.title}>{judicialStructure.tribunal.title}</SelectItem>
-                <SelectItem value={judicialStructure.court_of_appeal.title}>{judicialStructure.court_of_appeal.title}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="حالة القضية" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="جديدة">جديدة</SelectItem>
-                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
-                <SelectItem value="للحكم">للحكم</SelectItem>
-                <SelectItem value="محكومة">محكومة</SelectItem>
-                <SelectItem value="منتهية">منتهية</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterClientId} onValueChange={setFilterClientId}>
-              <SelectTrigger><SelectValue placeholder="الموكل" /></SelectTrigger>
-              <SelectContent>
-                {clients?.map(client => <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterFilingDateFrom ? format(filterFilingDateFrom, "PPP") : <span>تاريخ القيد (من)</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterFilingDateFrom} onSelect={setFilterFilingDateFrom} initialFocus />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterFilingDateTo ? format(filterFilingDateTo, "PPP") : <span>تاريخ القيد (إلى)</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterFilingDateTo} onSelect={setFilterFilingDateTo} initialFocus />
-              </PopoverContent>
-            </Popover>
-            <Button onClick={clearFilters} variant="outline">مسح الفلاتر</Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap gap-4 mb-6">
+        <Input
+          placeholder="بحث عام..."
+          value={globalFilter}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm flex-1"
+        />
+        <Select value={filterCaseCategory} onValueChange={setFilterCaseCategory}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="تصفية حسب الفئة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">الكل</SelectItem>
+            {judicialStructure.case_categories.map((category) => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterDivisionOrChamber} onValueChange={setFilterDivisionOrChamber}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="تصفية حسب القسم/الغرفة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">الكل</SelectItem>
+            {allDivisionsAndChambers.map((item) => (
+              <SelectItem key={item} value={item}>{item}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterAppealType} onValueChange={setFilterAppealType}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="تصفية حسب نوع الطعن" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">الكل</SelectItem>
+            {judicialStructure.appeal_types.map((type) => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>قائمة القضايا</CardTitle>
-          <CardDescription>
-            هنا قائمة بجميع القضايا المسجلة في النظام.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : isError ? (
-            <div className="text-red-500 text-center py-4">
-              حدث خطأ أثناء جلب البيانات.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">رقم القضية</TableHead>
-                    <TableHead className="text-right">الموكل</TableHead>
-                    <TableHead className="text-right">نوع القضية</TableHead>
-                    <TableHead className="text-right">جهة التقاضي</TableHead>
-                    <TableHead className="text-right">تاريخ القيد</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cases && cases.length > 0 ? (
-                    cases.map((caseItem) => (
-                      <TableRow key={caseItem.id}>
-                        <TableCell className="font-medium text-right">{caseItem.case_number}</TableCell>
-                        <TableCell className="text-right">{caseItem.clients?.full_name || "-"}</TableCell>
-                        <TableCell className="text-right">{caseItem.case_type}</TableCell>
-                        <TableCell className="text-right">{caseItem.court}</TableCell>
-                        <TableCell className="text-right">
-                          {caseItem.filing_date ? format(new Date(caseItem.filing_date), "PPP") : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">{caseItem.status || "جديدة"}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center space-x-2 space-x-reverse justify-end">
-                            <Link to={`/cases/${caseItem.id}`}>
-                              <Button variant="ghost" size="icon">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </Link>
-                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">
-                        لا يوجد قضايا لعرضها.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-[300px] w-full" />
+        </div>
+      ) : (
+        <DataTable columns={columns} data={cases || []} />
+      )}
 
-      <CaseSheet 
-        open={isSheetOpen} 
+      <CaseSheet
+        open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         caseData={editingCase}
       />
-      <DeleteConfirmationDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={confirmDelete}
-        isPending={deleteMutation.isPending}
-      />
-    </>
+    </div>
   );
 };
 
