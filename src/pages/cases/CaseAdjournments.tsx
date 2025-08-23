@@ -96,6 +96,7 @@ export const CaseAdjournments = ({ caseId, adjournments }: CaseAdjournmentsProps
   const defaultValues = editingAdjournment ? {
     ...editingAdjournment,
     adjournment_date: new Date(editingAdjournment.adjournment_date),
+    reason: editingAdjournment.reason ?? undefined, // تحويل null إلى undefined
   } : undefined;
 
   return (

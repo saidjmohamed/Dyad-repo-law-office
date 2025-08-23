@@ -64,6 +64,11 @@ export const getCases = async (filters: {
   return data;
 };
 
+// تعريف نوع التأجيل لغرض الفرز
+type AdjournmentForSort = {
+  adjournment_date: string;
+};
+
 export const getCaseById = async (id: string) => {
   const { data, error } = await supabase
     .from("cases")
@@ -86,7 +91,7 @@ export const getCaseById = async (id: string) => {
 
   // Sort adjournments by date ascending
   if (data && data.adjournments) {
-    data.adjournments.sort((a, b) => new Date(a.adjournment_date).getTime() - new Date(b.adjournment_date).getTime());
+    data.adjournments.sort((a: AdjournmentForSort, b: AdjournmentForSort) => new Date(a.adjournment_date).getTime() - new Date(b.adjournment_date).getTime());
   }
 
   return data;
