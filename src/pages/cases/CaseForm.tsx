@@ -24,8 +24,8 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { getClients } from "../clients/actions";
+// تم إزالة import { useQuery } from "@tanstack/react-query";
+// تم إزالة import { getClients } from "../clients/actions";
 import { Case } from "./actions";
 import { useEffect } from "react";
 import { ar } from 'date-fns/locale';
@@ -45,12 +45,12 @@ const formSchema = z.object({
   judgment_summary: z.string().optional().nullable(),
   status: z.string().min(1, "الحالة مطلوبة"),
   client_id: z.string().optional().nullable(),
-  fees_estimated: z.preprocess(
-    (val) => (val === "" || val === undefined ? null : Number(val)),
-    z.number().optional().nullable().refine((val) => val === null || val >= 0, {
+  fees_estimated: z.coerce.number() // استخدام coerce.number لتحويل السلسلة إلى رقم
+    .optional()
+    .nullable()
+    .refine((val) => val === null || (typeof val === 'number' && val >= 0), { // تم إضافة فحص typeof val
       message: "الرسوم المقدرة يجب أن تكون رقمًا موجبًا",
-    })
-  ),
+    }),
   notes: z.string().optional().nullable(),
 });
 

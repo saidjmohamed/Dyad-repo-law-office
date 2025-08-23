@@ -51,10 +51,18 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
   });
 
   const onSubmit = (data: CaseFormValues) => { // استخدام CaseFormValues
+    // تحويل حقول التاريخ من Date إلى string (ISO) قبل الإرسال
+    const formattedData = {
+      ...data,
+      filing_date: data.filing_date ? data.filing_date.toISOString() : null,
+      last_adjournment_date: data.last_adjournment_date ? data.last_adjournment_date.toISOString() : null,
+      next_hearing_date: data.next_hearing_date ? data.next_hearing_date.toISOString() : null,
+    };
+
     if (caseData) {
-      updateMutation.mutate({ id: caseData.id, ...data });
+      updateMutation.mutate({ id: caseData.id, ...formattedData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(formattedData);
     }
   };
 
