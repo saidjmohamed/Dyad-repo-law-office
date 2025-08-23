@@ -28,6 +28,7 @@ export const HearingSheet = ({ open, onOpenChange, hearing, caseIdForNewHearing 
     mutationFn: createHearing,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hearings"] });
+      queryClient.invalidateQueries({ queryKey: ["case", caseIdForNewHearing] }); // Invalidate specific case details
       showSuccess("تم إضافة الجلسة بنجاح.");
       onOpenChange(false);
     },
@@ -40,6 +41,7 @@ export const HearingSheet = ({ open, onOpenChange, hearing, caseIdForNewHearing 
     mutationFn: updateHearing,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hearings"] });
+      queryClient.invalidateQueries({ queryKey: ["case", hearing?.case_id] }); // Invalidate specific case details
       showSuccess("تم تحديث الجلسة بنجاح.");
       onOpenChange(false);
     },
@@ -65,7 +67,7 @@ export const HearingSheet = ({ open, onOpenChange, hearing, caseIdForNewHearing 
     result: hearing.result ?? undefined,
     notes: hearing.notes ?? undefined,
   } : {
-    case_id: caseIdForNewHearing || null, // Pre-fill case_id for new hearings
+    case_id: caseIdForNewHearing ?? undefined, // Pre-fill case_id for new hearings, use undefined if not present
     hearing_date: new Date(), // Default to today for new hearings
     room: undefined,
     judge: undefined,

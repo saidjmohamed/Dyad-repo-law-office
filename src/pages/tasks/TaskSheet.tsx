@@ -44,6 +44,7 @@ export const TaskSheet = ({ open, onOpenChange, task, caseIdForNewTask }: TaskSh
     mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["case", caseIdForNewTask] }); // Invalidate specific case details
       showSuccess("تمت إضافة المهمة بنجاح.");
       onOpenChange(false);
     },
@@ -56,6 +57,7 @@ export const TaskSheet = ({ open, onOpenChange, task, caseIdForNewTask }: TaskSh
     mutationFn: updateTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["case", task?.case_id] }); // Invalidate specific case details
       showSuccess("تم تحديث المهمة بنجاح.");
       onOpenChange(false);
     },
