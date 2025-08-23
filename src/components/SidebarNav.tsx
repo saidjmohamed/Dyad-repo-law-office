@@ -31,7 +31,7 @@ export const SidebarNav = ({ onLinkClick }: SidebarNavProps) => {
               "flex items-center px-4 py-2 text-sm font-medium rounded-md",
               isActive
                 ? "bg-primary text-primary-foreground"
-                : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                : "text-sidebar-foreground hover:bg-sidebar-accent dark:text-gray-300 dark:hover:bg-gray-800"
             )
           }
         >

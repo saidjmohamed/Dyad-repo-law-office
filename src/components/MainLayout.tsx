@@ -54,7 +54,7 @@ const MainLayout = () => {
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:flex-col md:w-64 bg-gray-50 border-l border-gray-200 dark:bg-gray-900 dark:border-gray-800">
+      <aside className="hidden md:flex md:flex-col md:w-64 bg-sidebar border-l border-border dark:bg-gray-900 dark:border-gray-800">
         <div className="flex items-center h-16 px-6 border-b dark:border-gray-800">
           <h1 className="text-lg font-semibold">مكتب الأستاذ سايج محمد</h1>
         </div>
@@ -62,7 +62,7 @@ const MainLayout = () => {
       </aside>
 
       <div className="flex flex-col flex-1">
-        <header className="flex items-center justify-between h-16 px-4 bg-white border-b md:px-6 dark:bg-gray-950 dark:border-gray-800">
+        <header className="flex items-center justify-between h-16 px-4 bg-background border-b border-border md:px-6 dark:bg-gray-950 dark:border-gray-800">
           {/* Mobile Menu */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -97,7 +97,7 @@ const MainLayout = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900/50">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-secondary dark:bg-gray-900/50">
           <Outlet />
         </main>
       </div>
