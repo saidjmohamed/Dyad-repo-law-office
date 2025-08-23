@@ -74,7 +74,6 @@ serve(async (req: Request) => {
       console.log("create-backup: Successfully parsed request body:", JSON.stringify(requestBody));
     } catch (jsonError) {
       console.error("create-backup: Error parsing request JSON:", (jsonError as Error).message);
-      // Removed the attempt to read raw body here to prevent "Body already consumed" error.
       return new Response(JSON.stringify({ error: `Failed to parse request body: ${(jsonError as Error).message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -82,6 +81,9 @@ serve(async (req: Request) => {
     }
 
     const { format, tables: selectedTables } = requestBody;
+    console.log("create-backup: Received format:", format);
+    console.log("create-backup: Received selectedTables:", selectedTables);
+
 
     const tablesToProcess = selectedTables && selectedTables.length > 0
       ? TABLES_TO_BACKUP.filter(table => selectedTables.includes(table))
