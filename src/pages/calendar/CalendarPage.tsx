@@ -18,7 +18,8 @@ const CalendarPage = () => {
   const navigate = useNavigate();
   const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [supabaseAccessToken, setSupabaseAccessToken] = useState<string | null>(null); // حالة لتخزين رمز الوصول الخاص بـ Supabase
+  const [supabaseAccessToken, setSupabaseAccessToken] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false); // حالة جديدة للتحميل
   const queryClient = useQueryClient();
 
   // جلب معرف المستخدم ورمز الوصول الخاص بـ Supabase عند تحميل المكون
@@ -81,13 +82,13 @@ const CalendarPage = () => {
   });
 
   const { data: googleEvents, isLoading: isLoadingGoogleEvents, refetch: refetchGoogleEvents } = useQuery({
-    queryKey: ['googleEvents', userId, supabaseAccessToken], // إضافة supabaseAccessToken إلى مفتاح الاستعلام
+    queryKey: ['googleEvents', userId, supabaseAccessToken],
     queryFn: async () => {
-      if (!userId || !isGoogleCalendarConnected || !supabaseAccessToken) return []; // التأكد من توفر الرمز المميز
+      if (!userId || !isGoogleCalendarConnected || !supabaseAccessToken) return [];
+      console.log("Invoking get-google-calendar-events with Supabase Access Token:", supabaseAccessToken); // سجل تصحيح الأخطاء
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabaseAccessToken}`, // إضافة رأس المصادقة
           'Content-Type': 'application/json',
         },
         body: { user_id: userId },
@@ -96,7 +97,6 @@ const CalendarPage = () => {
       if (error) {
         console.error('Error fetching Google Calendar events:', error);
         showError(`فشل جلب أحداث تقويم Google: ${error.message}`);
-        // إذا فشل تحديث الرمز المميز، افصل تقويم Google
         if (error.message.includes('re-authenticate')) {
           setIsGoogleCalendarConnected(false);
         }
@@ -104,7 +104,7 @@ const CalendarPage = () => {
       }
       return data.events;
     },
-    enabled: !!userId && isGoogleCalendarConnected && !!supabaseAccessToken, // تشغيل الاستعلام فقط إذا كان المستخدم مسجلاً للدخول ومتصلاً ولديه رمز مميز
+    enabled: !!userId && isGoogleCalendarConnected && !!supabaseAccessToken,
   });
 
   const events = useMemo(() => {
@@ -144,24 +144,25 @@ const CalendarPage = () => {
   }, [hearings, tasks, googleEvents, isGoogleCalendarConnected]);
 
   const handleEventClick = (clickInfo: any) => {
-    clickInfo.jsEvent.preventDefault(); // منع التنقل في المتصفح
+    clickInfo.jsEvent.preventDefault();
     if (clickInfo.event.url) {
       navigate(clickInfo.event.url);
     }
   };
 
   const handleConnectGoogleCalendar = async () => {
-    try {
-      if (!supabaseAccessToken) {
-        showError("يجب أن تكون مسجلاً للدخول لربط تقويم Google.");
-        return;
-      }
+    if (!supabaseAccessToken) {
+      showError("يجب أن تكون مسجلاً للدخول لربط تقويم Google.");
+      return;
+    }
 
+    setIsConnecting(true); // تفعيل حالة التحميل
+    console.log("Supabase Access Token before invoking google-oauth-init:", supabaseAccessToken); // سجل تصحيح الأخطاء
+
+    try {
       const { data, error } = await supabase.functions.invoke('google-oauth-init', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${supabaseAccessToken}`, // إضافة رأس المصادقة
-        },
+        // تم إزالة رأس Authorization اليدوي، ستقوم مكتبة Supabase بإضافته تلقائيًا
       });
 
       if (error) {
@@ -176,6 +177,8 @@ const CalendarPage = () => {
     } catch (error: any) {
       showError(`فشل ربط تقويم Google: ${error.message}`);
       console.error("Error connecting to Google Calendar:", error);
+    } finally {
+      setIsConnecting(false); // تعطيل حالة التحميل
     }
   };
 
@@ -192,7 +195,7 @@ const CalendarPage = () => {
       }
       setIsGoogleCalendarConnected(false);
       showSuccess("تم فصل تقويم Google بنجاح.");
-      queryClient.invalidateQueries({ queryKey: ['googleEvents', userId] }); // إبطال أحداث Google
+      queryClient.invalidateQueries({ queryKey: ['googleEvents', userId] });
     } catch (error: any) {
       showError(`فشل فصل تقويم Google: ${error.message}`);
       console.error("Error disconnecting Google Calendar:", error);
@@ -222,9 +225,8 @@ const CalendarPage = () => {
               </Button>
             </>
           ) : (
-            <Button onClick={handleConnectGoogleCalendar}>
-                <CalendarPlus className="w-4 h-4 ml-2" />
-                ربط تقويم Google
+            <Button onClick={handleConnectGoogleCalendar} disabled={isConnecting}>
+                {isConnecting ? "جاري الربط..." : <><CalendarPlus className="w-4 h-4 ml-2" />ربط تقويم Google</>}
             </Button>
           )}
         </div>

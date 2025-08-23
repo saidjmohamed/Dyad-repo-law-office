@@ -8,6 +8,10 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
+  console.log("Edge Function 'get-google-calendar-events' received request."); // سجل تصحيح الأخطاء
+  const authHeader = req.headers.get('authorization');
+  console.log("Authorization Header in get-google-calendar-events:", authHeader); // سجل تصحيح الأخطاء لرأس Authorization
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

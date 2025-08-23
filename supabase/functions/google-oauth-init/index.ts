@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
@@ -5,7 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
+  console.log("Edge Function 'google-oauth-init' received request."); // سجل تصحيح الأخطاء
+  const authHeader = req.headers.get('authorization');
+  console.log("Authorization Header in google-oauth-init:", authHeader); // سجل تصحيح الأخطاء لرأس Authorization
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,7 +32,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error initiating Google OAuth:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
