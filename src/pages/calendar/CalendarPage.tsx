@@ -1,21 +1,66 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // استيراد useQueryClient
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { getHearings } from '../hearings/actions';
 import { getTasks } from '../tasks/actions';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import arLocale from '@fullcalendar/core/locales/ar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, RefreshCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { showError } from '@/utils/toast'; // Removed showSuccess
+import { showError, showSuccess } from '@/utils/toast';
 
 const CalendarPage = () => {
   const navigate = useNavigate();
+  const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const queryClient = useQueryClient(); // تعريف queryClient هنا
+
+  // Fetch user ID on component mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Check if Google Calendar is already connected
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (userId) {
+        const { data } = await supabase // تم إزالة 'error' لأنه غير مستخدم
+          .from('user_integrations')
+          .select('google_access_token')
+          .eq('user_id', userId)
+          .single();
+        if (data && data.google_access_token) {
+          setIsGoogleCalendarConnected(true);
+        } else {
+          setIsGoogleCalendarConnected(false);
+        }
+      }
+    };
+    checkConnection();
+  }, [userId]);
+
+  // Handle redirect after Google OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('google_auth_success') === 'true') {
+      showSuccess("تم ربط تقويم Google بنجاح!");
+      setIsGoogleCalendarConnected(true);
+      // Clean up URL
+      urlParams.delete('google_auth_success');
+      navigate({ search: urlParams.toString() }, { replace: true });
+    }
+  }, [navigate]);
 
   const { data: hearings, isLoading: isLoadingHearings } = useQuery({
     queryKey: ['hearings'],
@@ -25,6 +70,29 @@ const CalendarPage = () => {
   const { data: tasks, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: getTasks,
+  });
+
+  const { data: googleEvents, isLoading: isLoadingGoogleEvents, refetch: refetchGoogleEvents } = useQuery({
+    queryKey: ['googleEvents', userId],
+    queryFn: async () => {
+      if (!userId || !isGoogleCalendarConnected) return [];
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
+        method: 'POST',
+        body: { user_id: userId },
+      });
+
+      if (error) {
+        console.error('Error fetching Google Calendar events:', error);
+        showError(`فشل جلب أحداث تقويم Google: ${error.message}`);
+        // If token refresh failed, disconnect Google Calendar
+        if (error.message.includes('re-authenticate')) {
+          setIsGoogleCalendarConnected(false);
+        }
+        return [];
+      }
+      return data.events;
+    },
+    enabled: !!userId && isGoogleCalendarConnected, // Only run if user is logged in and connected
   });
 
   const events = useMemo(() => {
@@ -54,8 +122,14 @@ const CalendarPage = () => {
           }
         })) || [];
 
-    return [...hearingEvents, ...taskEvents];
-  }, [hearings, tasks]);
+    const allEvents = [...hearingEvents, ...taskEvents];
+
+    if (isGoogleCalendarConnected && googleEvents) {
+      allEvents.push(...googleEvents);
+    }
+
+    return allEvents;
+  }, [hearings, tasks, googleEvents, isGoogleCalendarConnected]);
 
   const handleEventClick = (clickInfo: any) => {
     clickInfo.jsEvent.preventDefault(); // prevent browser navigation
@@ -84,8 +158,28 @@ const CalendarPage = () => {
       console.error("Error connecting to Google Calendar:", error);
     }
   };
+
+  const handleDisconnectGoogleCalendar = async () => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase
+        .from('user_integrations')
+        .update({ google_access_token: null, google_refresh_token: null, google_calendar_id: null })
+        .eq('user_id', userId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      setIsGoogleCalendarConnected(false);
+      showSuccess("تم فصل تقويم Google بنجاح.");
+      queryClient.invalidateQueries({ queryKey: ['googleEvents', userId] }); // Invalidate Google events
+    } catch (error: any) {
+      showError(`فشل فصل تقويم Google: ${error.message}`);
+      console.error("Error disconnecting Google Calendar:", error);
+    }
+  };
   
-  const isLoading = isLoadingHearings || isLoadingTasks;
+  const isLoading = isLoadingHearings || isLoadingTasks || isLoadingGoogleEvents;
 
   return (
     <div>
@@ -96,10 +190,24 @@ const CalendarPage = () => {
             عرض مركزي لجميع الجلسات والمهام القادمة.
           </p>
         </div>
-        <Button onClick={handleConnectGoogleCalendar}>
-            <CalendarPlus className="w-4 h-4 ml-2" />
-            ربط تقويم Google
-        </Button>
+        <div className="flex space-x-2 space-x-reverse">
+          {isGoogleCalendarConnected ? (
+            <>
+              <Button onClick={() => refetchGoogleEvents()} variant="outline">
+                <RefreshCcw className="w-4 h-4 ml-2" />
+                تحديث أحداث Google
+              </Button>
+              <Button onClick={handleDisconnectGoogleCalendar} variant="destructive">
+                فصل تقويم Google
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleConnectGoogleCalendar}>
+                <CalendarPlus className="w-4 h-4 ml-2" />
+                ربط تقويم Google
+            </Button>
+          )}
+        </div>
       </div>
       
       <Card>
