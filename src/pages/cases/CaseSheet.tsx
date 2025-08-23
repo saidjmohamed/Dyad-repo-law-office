@@ -6,10 +6,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { CaseForm, CaseFormValues } from "./CaseForm"; // استيراد CaseFormValues
+import { CaseForm } from "./CaseForm";
 import { createCase, updateCase, Case } from "./actions"; // استخدام Case من actions
 import { getClients } from "../clients/actions";
 import { showSuccess, showError } from "@/utils/toast";
+import { CaseFormValues } from "./caseSchema"; // استيراد CaseFormValues من caseSchema
 
 interface CaseSheetProps {
   open: boolean;

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -24,91 +23,22 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-// تم إزالة import { useQuery } from "@tanstack/react-query";
-// تم إزالة import { getClients } from "../clients/actions";
 import { Case } from "./actions";
 import { useEffect } from "react";
 import { ar } from 'date-fns/locale';
-
-const formSchema = z.object({
-  case_type: z.string().min(1, "نوع القضية مطلوب"),
-  court: z.string().optional().nullable(),
-  division: z.string().optional().nullable(),
-  criminal_subtype: z.string().optional().nullable(), // حقل جديد
-  case_number: z.string().min(1, "رقم القضية مطلوب"),
-  filing_date: z.date().optional().nullable(),
-  role_in_favor: z.string().optional().nullable(),
-  role_against: z.string().optional().nullable(),
-  last_adjournment_date: z.date().optional().nullable(),
-  last_adjournment_reason: z.string().optional().nullable(),
-  next_hearing_date: z.date().optional().nullable(),
-  judgment_summary: z.string().optional().nullable(),
-  status: z.string().min(1, "الحالة مطلوبة"),
-  client_id: z.string().optional().nullable(),
-  fees_estimated: z.coerce.number() // استخدام coerce.number لتحويل السلسلة إلى رقم
-    .optional()
-    .nullable()
-    .refine((val) => val === null || (typeof val === 'number' && val >= 0), { // تم إضافة فحص typeof val
-      message: "الرسوم المقدرة يجب أن تكون رقمًا موجبًا",
-    }),
-  notes: z.string().optional().nullable(),
-});
-
-export type CaseFormValues = z.infer<typeof formSchema>; // تصدير النوع لاستخدامه في CaseSheet
+import { caseFormSchema, CaseFormValues } from "./caseSchema"; // استيراد المخطط والنوع
+import { caseTypeOptions, courtOptions, divisionOptions, criminalSubtypeOptions, statusOptions } from "@/data/caseOptions"; // استيراد الخيارات
 
 interface CaseFormProps {
   initialData?: Case;
   onSubmit: (data: CaseFormValues) => void;
-  isLoading: boolean; // تم تغيير isPending إلى isLoading
-  clients: { id: string; full_name: string }[]; // إضافة prop clients
+  isLoading: boolean;
+  clients: { id: string; full_name: string }[];
 }
 
-const caseTypeOptions = [
-  { value: "قضية محكمة", label: "قضية محكمة" },
-  { value: "قضية جزائية", label: "قضية جزائية" },
-  { value: "قضية تجارية", label: "قضية تجارية" },
-  { value: "مجلس قضاء", label: "مجلس قضاء" },
-  { value: "مجلس دولة", label: "مجلس دولة" },
-  { value: "محكمة عليا", label: "محكمة عليا" },
-];
-
-const courtOptions = {
-  "قضية محكمة": ["محكمة سيدي امحمد", "محكمة بئر مراد رايس", "محكمة حسين داي", "محكمة باب الواد"],
-  "قضية جزائية": ["محكمة سيدي امحمد", "محكمة بئر مراد رايس", "محكمة حسين داي"],
-  "قضية تجارية": ["المحكمة التجارية بالجزائر", "المحكمة التجارية بوهران"],
-  "مجلس قضاء": ["مجلس قضاء الجزائر", "مجلس قضاء وهران", "مجلس قضاء قسنطينة"],
-  "مجلس دولة": ["مجلس الدولة"],
-  "محكمة عليا": ["المحكمة العليا"],
-};
-
-const divisionOptions = [
-  "عقاري",
-  "مدني",
-  "تجاري",
-  "استعجالي",
-  "اجتماعي",
-  "بحري",
-  "أحوال شخصية",
-  "إداري",
-];
-
-const criminalSubtypeOptions = [
-  "شكوى لوكيل جمهورية",
-  "شكوى مصحوبة بادعاء مدني لقاضي تحقيق",
-];
-
-const statusOptions = [
-  { value: "جديدة", label: "جديدة" },
-  { value: "قيد التنفيذ", label: "قيد التنفيذ" },
-  { value: "مؤجلة", label: "مؤجلة" },
-  { value: "مكتملة", label: "مكتملة" },
-  { value: "مغلقة", label: "مغلقة" },
-];
-
 export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseFormProps) => {
-  // تم إزالة useQuery هنا لأن clients يتم تمريرها كـ prop
   const form = useForm<CaseFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(caseFormSchema), // استخدام المخطط المستورد
     defaultValues: {
       case_type: initialData?.case_type || "",
       court: initialData?.court || null,
