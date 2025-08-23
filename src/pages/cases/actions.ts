@@ -44,13 +44,71 @@ export const caseSchema = z.object({
 
 export type CaseFormData = z.infer<typeof caseSchema>;
 
+// Define types for nested relations
+type Client = {
+  id: string;
+  full_name: string;
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+};
+
+type Hearing = {
+  id: string;
+  hearing_date: string;
+  room?: string | null;
+  judge?: string | null;
+  result?: string | null;
+  notes?: string | null;
+};
+
+type Task = {
+  id: string;
+  title: string;
+  done: boolean;
+  due_date: string | null;
+  priority: string | null;
+  case_id: string;
+};
+
+type CaseFile = {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+  size: number;
+};
+
+type FinancialTransaction = {
+  id: string;
+  transaction_type: 'أتعاب' | 'مصروف';
+  description: string;
+  amount: number;
+  transaction_date: string;
+};
+
+type Adjournment = {
+  id: string;
+  adjournment_date: string;
+  reason?: string | null;
+};
+
 export type Case = CaseFormData & {
   id: string;
   created_at: string;
   updated_at: string;
   user_id: string;
   client_name: string;
-  parties?: Party[]; // Include parties in the Case type
+  clients: Client; // Nested client data
+  parties: Party[]; // Nested parties data
+  hearings: Hearing[]; // Nested hearings data
+  tasks: Task[]; // Nested tasks data
+  case_files: CaseFile[]; // Nested case files data
+  financial_transactions: FinancialTransaction[]; // Nested financial transactions data
+  adjournments: Adjournment[]; // Nested adjournments data
+  status?: string | null; // Add status here as it's used in Index.tsx
 };
 
 export async function getCases(
@@ -94,7 +152,12 @@ export async function getCaseById(id: string): Promise<Case> {
     .select(`
       *,
       clients (full_name),
-      parties (*)
+      parties (*),
+      hearings (*),
+      tasks (*),
+      case_files (*),
+      financial_transactions (*),
+      adjournments (*)
     `)
     .eq("id", id)
     .single();
@@ -103,6 +166,11 @@ export async function getCaseById(id: string): Promise<Case> {
     ...data,
     client_name: data.clients?.full_name || "N/A",
     parties: data.parties || [],
+    hearings: data.hearings || [],
+    tasks: data.tasks || [],
+    case_files: data.case_files || [],
+    financial_transactions: data.financial_transactions || [],
+    adjournments: data.adjournments || [],
   };
 }
 

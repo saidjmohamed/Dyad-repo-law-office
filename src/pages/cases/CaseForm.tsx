@@ -19,14 +19,14 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CaseFormData, caseSchema, createCase, updateCase } from "./actions";
+import { CaseFormData, caseSchema, createCase, updateCase, Case } from "./actions"; // استيراد Case
 import { getClients } from "../clients/actions";
 import { judicialStructure, Court, Council } from "@/data/judicialStructure"; // استيراد الأنواع الجديدة
 import { useEffect } from "react";
 import { ar } from 'date-fns/locale';
 
 interface CaseFormProps {
-  initialData?: CaseFormData | null; // السماح بـ null
+  initialData?: Case | null; // تم تعديل النوع للسماح بـ Case | null
   onSuccess: () => void;
 }
 

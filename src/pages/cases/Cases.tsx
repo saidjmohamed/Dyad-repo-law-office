@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteCase, getCases, Case as CaseData, CaseFormData } from "./actions"; // استيراد CaseFormData
+import { deleteCase, getCases, Case as CaseType } from "./actions"; // استخدام CaseType
 import { DataTable } from "@/components/ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table"; // استيراد ColumnDef و Row
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingCase, setEditingCase] = useState<CaseData | null>(null);
+  const [editingCase, setEditingCase] = useState<CaseType | null>(null); // استخدام CaseType
   const [globalFilter, setGlobalFilter] = useState("");
   const [filterCaseCategory, setFilterCaseCategory] = useState("");
   const [filterDivisionOrChamber, setFilterDivisionOrChamber] = useState("");
@@ -37,7 +37,7 @@ const Cases = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: cases, isLoading } = useQuery<CaseData[]>({
+  const { data: cases, isLoading } = useQuery<CaseType[]>({ // استخدام CaseType
     queryKey: ["cases", globalFilter, filterCaseCategory, filterDivisionOrChamber, filterAppealType],
     queryFn: () => getCases(filterCaseCategory, filterDivisionOrChamber, filterAppealType, globalFilter),
   });
@@ -53,7 +53,7 @@ const Cases = () => {
     },
   });
 
-  const handleEdit = (caseData: CaseData) => {
+  const handleEdit = (caseData: CaseType) => { // استخدام CaseType
     setEditingCase(caseData);
     setIsSheetOpen(true);
   };
@@ -62,11 +62,11 @@ const Cases = () => {
     deleteCaseMutation.mutate(id);
   };
 
-  const columns: ColumnDef<CaseData>[] = useMemo(() => [
+  const columns: ColumnDef<CaseType>[] = useMemo(() => [ // استخدام CaseType
     {
       accessorKey: "case_number",
       header: "رقم القضية",
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<CaseType> }) => ( // تحديد نوع row
         <Link to={`/cases/${row.original.id}`} className="text-primary hover:underline">
           {row.getValue("case_number")}
         </Link>
@@ -95,7 +95,7 @@ const Cases = () => {
     {
       accessorKey: "status",
       header: "الحالة",
-      cell: ({ row }) => {
+      cell: ({ row }: { row: Row<CaseType> }) => { // تحديد نوع row
         const status = row.getValue("status");
         let variant: "default" | "secondary" | "destructive" | "outline" = "default";
         switch (status) {
@@ -118,7 +118,7 @@ const Cases = () => {
     {
       id: "actions",
       header: "الإجراءات",
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<CaseType> }) => ( // تحديد نوع row
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">

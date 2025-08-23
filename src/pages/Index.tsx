@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getClients } from "./clients/actions";
-import { getCases } from "./cases/actions";
+import { getCases, Case as CaseType } from "./cases/actions"; // استيراد CaseType من actions
 import { getHearings } from "./hearings/actions";
 import { getTasks } from "./tasks/actions";
 import { DashboardStatCard } from "@/components/DashboardStatCard";
@@ -12,12 +12,11 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { CaseTypePieChart } from "@/components/charts/CaseTypePieChart";
 import { MonthlyCaseBarChart } from "@/components/charts/MonthlyCaseBarChart";
-import { ar } from 'date-fns/locale'; // استيراد اللغة العربية لـ date-fns
-import { useMemo } from 'react'; // تم إضافة استيراد useMemo
+import { ar } from 'date-fns/locale';
+import { useMemo } from 'react';
 
 // Define types for data fetched from queries
 type Client = { id: string; full_name: string; };
-type Case = { id: string; status: string; case_number: string; client_name: string; case_type: string; filing_date?: string | null; };
 type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; case_id: string; };
 type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; case_id?: string | null; };
 
@@ -26,7 +25,7 @@ const Index = () => {
     queryKey: ["clients"],
     queryFn: getClients,
   });
-  const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseType[]>({ // استخدام CaseType المحدث
     queryKey: ["cases"],
     queryFn: () => getCases(),
   });
@@ -43,21 +42,21 @@ const Index = () => {
 
   const stats = {
     totalClients: clients?.length ?? 0,
-    activeCases: cases?.filter(c => c.status !== "مكتملة").length ?? 0,
-    upcomingHearings: hearings?.filter(h => new Date(h.hearing_date) >= new Date()).length ?? 0,
-    pendingTasks: tasks?.filter(t => !t.done).length ?? 0,
+    activeCases: cases?.filter((c: CaseType) => c.status !== "مكتملة").length ?? 0, // تحديد نوع c
+    upcomingHearings: hearings?.filter((h: Hearing) => new Date(h.hearing_date) >= new Date()).length ?? 0, // تحديد نوع h
+    pendingTasks: tasks?.filter((t: Task) => !t.done).length ?? 0, // تحديد نوع t
   };
 
   const upcomingHearingsList = hearings
-    ?.filter(h => new Date(h.hearing_date) >= new Date())
+    ?.filter((h: Hearing) => new Date(h.hearing_date) >= new Date()) // تحديد نوع h
     .sort((a, b) => new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime())
     .slice(0, 5);
 
   const pendingTasksList = tasks
-    ?.filter(t => !t.done)
+    ?.filter((t: Task) => !t.done) // تحديد نوع t
     .sort((a, b) => {
         const priorityOrder: { [key: string]: number } = { 'عالية': 1, 'متوسط': 2, 'منخفضة': 3 };
-        return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+        return (priorityOrder[a.priority || 'متوسط'] || 2) - (priorityOrder[b.priority || 'متوسط'] || 2); // إضافة قيمة افتراضية
     })
     .slice(0, 5);
 
@@ -74,7 +73,7 @@ const Index = () => {
   const caseTypeData = useMemo(() => {
     if (!cases) return [];
     const typeCounts: { [key: string]: number } = {};
-    cases.forEach(c => {
+    cases.forEach((c: CaseType) => { // تحديد نوع c
       typeCounts[c.case_type] = (typeCounts[c.case_type] || 0) + 1;
     });
     return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
@@ -84,17 +83,24 @@ const Index = () => {
   const monthlyCaseData = useMemo(() => {
     if (!cases) return [];
     const monthCounts: { [key: string]: number } = {};
-    cases.forEach(c => {
+    cases.forEach((c: CaseType) => { // تحديد نوع c
       if (c.filing_date) {
         const date = parseISO(c.filing_date);
-        const monthYear = format(date, "MMM yyyy", { locale: ar }); // تنسيق الشهر والسنة باللغة العربية
+        const monthYear = format(date, "MMM yyyy", { locale: ar });
         monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1;
       }
     });
     // Sort by date to ensure correct order
     const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
-      const dateA = parseISO(a.replace(/(\S+) (\d{4})/, '01 $1 $2')); // Dummy day for parsing
-      const dateB = parseISO(b.replace(/(\S+) (\d{4})/, '01 $1 $2'));
+      // Adjusted parsing for monthYear format "MMM yyyy"
+      const parseDateString = (s: string) => {
+        const [monthStr, yearStr] = s.split(' ');
+        const monthIndex = ar.localize?.month((m) => m === monthStr, { width: 'abbreviated' });
+        if (monthIndex === undefined) return new Date(0); // Fallback for unparsed month
+        return new Date(parseInt(yearStr), monthIndex, 1);
+      };
+      const dateA = parseDateString(a);
+      const dateB = parseDateString(b);
       return dateA.getTime() - dateB.getTime();
     });
 
