@@ -73,7 +73,8 @@ export const getCaseById = async (id: string) => {
       hearings(*),
       tasks(*),
       case_files(*),
-      financial_transactions(*)
+      financial_transactions(*),
+      adjournments(*)
     `)
     .eq("id", id)
     .single();
@@ -81,6 +82,11 @@ export const getCaseById = async (id: string) => {
   if (error) {
     console.error(`Error fetching case with id ${id}:`, error);
     throw new Error("لا يمكن جلب تفاصيل القضية.");
+  }
+
+  // Sort adjournments by date ascending
+  if (data && data.adjournments) {
+    data.adjournments.sort((a, b) => new Date(a.adjournment_date).getTime() - new Date(b.adjournment_date).getTime());
   }
 
   return data;

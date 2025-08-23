@@ -9,8 +9,9 @@ import { CaseHearings } from "./CaseHearings";
 import { CaseTasks } from "./CaseTasks";
 import { CaseDocuments } from "./CaseDocuments";
 import { CaseFinancials } from "./CaseFinancials";
+import { CaseAdjournments } from "./CaseAdjournments"; // استيراد المكون الجديد
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign } from "lucide-react";
+import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign, ChevronsRight } from "lucide-react"; // استيراد أيقونة جديدة
 
 // Define types for the fetched data
 type Client = {
@@ -57,6 +58,12 @@ type FinancialTransaction = {
   transaction_date: string;
 };
 
+type Adjournment = {
+  id: string;
+  adjournment_date: string;
+  reason?: string | null;
+};
+
 type CaseDetailsData = {
   id: string;
   case_type: string;
@@ -69,11 +76,12 @@ type CaseDetailsData = {
   fees_estimated?: number | null;
   notes?: string | null;
   status?: string | null;
-  clients: Client; // Changed from clients? to clients
+  clients: Client;
   hearings: Hearing[];
   tasks: Task[];
   case_files: CaseFile[];
   financial_transactions: FinancialTransaction[];
+  adjournments: Adjournment[]; // إضافة التأجيلات إلى النوع
 };
 
 const CaseDetails = () => {
@@ -117,9 +125,10 @@ const CaseDetails = () => {
       </div>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
           <TabsTrigger value="details"><Briefcase className="w-4 h-4 ml-2" />التفاصيل</TabsTrigger>
           <TabsTrigger value="hearings"><CalendarClock className="w-4 h-4 ml-2" />الجلسات</TabsTrigger>
+          <TabsTrigger value="adjournments"><ChevronsRight className="w-4 h-4 ml-2" />التأجيلات</TabsTrigger>
           <TabsTrigger value="tasks"><ListTodo className="w-4 h-4 ml-2" />المهام</TabsTrigger>
           <TabsTrigger value="documents"><FileText className="w-4 h-4 ml-2" />المستندات</TabsTrigger>
           <TabsTrigger value="financials"><DollarSign className="w-4 h-4 ml-2" />الأمور المالية</TabsTrigger>
@@ -164,6 +173,10 @@ const CaseDetails = () => {
 
         <TabsContent value="hearings" className="mt-6">
           <CaseHearings caseId={caseDetails.id} hearings={caseDetails.hearings} />
+        </TabsContent>
+
+        <TabsContent value="adjournments" className="mt-6">
+          <CaseAdjournments caseId={caseDetails.id} adjournments={caseDetails.adjournments} />
         </TabsContent>
 
         <TabsContent value="tasks" className="mt-6">
