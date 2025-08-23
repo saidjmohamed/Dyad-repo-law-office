@@ -39,7 +39,7 @@ export const createBackup = async (format: BackupFormat, tables: BackupTable[]):
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: requestBody,
+    body: JSON.stringify(requestBody), // تحويل الجسم إلى سلسلة JSON بشكل صريح
   });
 
   if (error) {
