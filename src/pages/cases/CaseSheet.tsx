@@ -55,9 +55,13 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     // تحويل حقول التاريخ من Date إلى string (ISO) قبل الإرسال
     const formattedData = {
       ...data,
-      filing_date: data.filing_date ? data.filing_date.toISOString() : null,
-      last_adjournment_date: data.last_adjournment_date ? data.last_adjournment_date.toISOString() : null,
+      registered_at: data.registered_at ? data.registered_at.toISOString() : null,
+      original_judgment_date: data.original_judgment_date ? data.original_judgment_date.toISOString() : null,
+      first_hearing_date: data.first_hearing_date ? data.first_hearing_date.toISOString() : null,
+      last_postponement_date: data.last_postponement_date ? data.last_postponement_date.toISOString() : null,
       next_hearing_date: data.next_hearing_date ? data.next_hearing_date.toISOString() : null,
+      created_at: data.created_at ? data.created_at.toISOString() : null,
+      last_modified_at: data.last_modified_at ? data.last_modified_at.toISOString() : null,
     };
 
     if (caseData) {

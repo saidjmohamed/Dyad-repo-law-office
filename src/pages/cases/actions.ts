@@ -2,35 +2,99 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Case {
   id: string;
-  case_type: string;
-  court?: string | null;
-  division?: string | null;
-  criminal_subtype?: string | null; // حقل جديد
-  case_number: string;
-  filing_date?: string | null;
-  role_in_favor?: string | null;
-  role_against?: string | null;
-  last_adjournment_date?: string | null;
-  last_adjournment_reason?: string | null;
+  case_category: string; // Renamed from case_type
+  procedure_type: string;
+  case_number?: string | null;
+  registered_at?: string | null;
+  court_name?: string | null;
+  province?: string | null;
+  jurisdiction_section?: string | null;
+  appeal_to_court?: string | null;
+  supreme_court_chamber?: string | null;
+
+  // Criminal Details
+  criminal_offense_type?: string | null;
+  complaint_filed_with?: string | null;
+  investigation_number?: string | null;
+
+  // Appeal Details
+  original_case_number?: string | null;
+  original_judgment_date?: string | null;
+  appellant_or_opponent?: string | null;
+  grounds_of_appeal?: string | null;
+
+  // Procedural Dates
+  first_hearing_date?: string | null;
+  last_postponement_date?: string | null;
+  postponement_reason?: string | null;
   next_hearing_date?: string | null;
-  judgment_summary?: string | null;
-  status: string;
-  client_id?: string | null;
-  client_name?: string | null; // لأغراض العرض، لا يتم تخزينه مباشرة
-  fees_estimated?: number | null;
-  notes?: string | null;
+  judgment_text?: string | null;
+  statute_of_limitations?: string | null;
+
+  // Finance
+  fees_amount?: number | null;
+  fees_status?: string | null;
+  fees_notes?: string | null;
+
+  // Notes
+  internal_notes?: string | null;
+  public_summary?: string | null;
+
+  // Audit/Access Control
+  created_by?: string | null;
   created_at: string;
-  updated_at?: string | null;
+  last_modified_by?: string | null;
+  last_modified_at?: string | null;
+  access_control?: string[] | null;
+
+  user_id: string; // Owner of the case
+
+  // Relations (for fetching, not direct storage in 'cases' table)
+  client_id?: string | null; // Still linking to clients table
+  client_name?: string | null; // For display purposes
+  case_parties?: CaseParty[] | null;
+  case_attachments?: CaseAttachment[] | null;
+  hearings?: any[] | null; // Assuming existing hearings structure
+  tasks?: any[] | null; // Assuming existing tasks structure
+  financial_transactions?: any[] | null; // Assuming existing financial_transactions structure
+  adjournments?: any[] | null; // Assuming existing adjournments structure
+}
+
+export interface CaseParty {
+  id: string;
+  case_id: string;
   user_id: string;
+  party_type: 'plaintiff' | 'defendant' | 'other';
+  role?: string | null;
+  name: string;
+  role_detail?: string | null;
+  address?: string | null;
+  id_number?: string | null;
+  contact?: string | null;
+  representative?: string | null;
+  created_at: string;
+}
+
+export interface CaseAttachment {
+  id: string;
+  case_id: string;
+  user_id: string;
+  file_name: string;
+  storage_path: string;
+  mime_type?: string | null;
+  size?: number | null;
+  title?: string | null;
+  description?: string | null;
+  uploaded_at: string;
 }
 
 interface GetCasesFilters {
   searchTerm?: string;
-  filterCaseType?: string;
-  filterCourt?: string;
+  filterCaseCategory?: string; // Renamed
+  filterCourtName?: string; // Renamed
   filterStatus?: string;
-  filterFilingDateFrom?: string;
-  filterFilingDateTo?: string;
+  filterRegisteredAtFrom?: string; // Renamed
+  filterRegisteredAtTo?: string; // Renamed
   filterClientId?: string;
 }
 
@@ -45,20 +109,20 @@ export const getCases = async (filters?: GetCasesFilters): Promise<Case[]> => {
   if (filters?.searchTerm) {
     query = query.ilike('case_number', `%${filters.searchTerm}%`); // Example, adjust as needed for full-text search
   }
-  if (filters?.filterCaseType) {
-    query = query.eq('case_type', filters.filterCaseType);
+  if (filters?.filterCaseCategory) {
+    query = query.eq('case_category', filters.filterCaseCategory);
   }
-  if (filters?.filterCourt) {
-    query = query.eq('court', filters.filterCourt);
+  if (filters?.filterCourtName) {
+    query = query.eq('court_name', filters.filterCourtName);
   }
   if (filters?.filterStatus) {
     query = query.eq('status', filters.filterStatus);
   }
-  if (filters?.filterFilingDateFrom) {
-    query = query.gte('filing_date', filters.filterFilingDateFrom);
+  if (filters?.filterRegisteredAtFrom) {
+    query = query.gte('registered_at', filters.filterRegisteredAtFrom);
   }
-  if (filters?.filterFilingDateTo) {
-    query = query.lte('filing_date', filters.filterFilingDateTo);
+  if (filters?.filterRegisteredAtTo) {
+    query = query.lte('registered_at', filters.filterRegisteredAtTo);
   }
   if (filters?.filterClientId) {
     query = query.eq('client_id', filters.filterClientId);
@@ -84,7 +148,13 @@ export const getCase = async (id: string): Promise<Case> => {
     .from("cases")
     .select(`
       *,
-      clients (full_name)
+      clients (full_name),
+      case_parties (*),
+      case_attachments (*),
+      hearings (*),
+      tasks (*),
+      financial_transactions (*),
+      adjournments (*)
     `)
     .eq("id", id)
     .single();
@@ -100,13 +170,47 @@ export const getCase = async (id: string): Promise<Case> => {
   };
 };
 
-export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "user_id" | "client_name">): Promise<Case> => {
+// Helper to insert/update parties
+const manageCaseParties = async (caseId: string, userId: string, parties: CaseParty[]) => {
+  const existingParties = await supabase.from('case_parties').select('id').eq('case_id', caseId);
+  const existingPartyIds = existingParties.data?.map(p => p.id) || [];
+  const incomingPartyIds = parties.filter(p => p.id).map(p => p.id);
+
+  // Delete removed parties
+  const partiesToDelete = existingPartyIds.filter(id => !incomingPartyIds.includes(id));
+  if (partiesToDelete.length > 0) {
+    const { error } = await supabase.from('case_parties').delete().in('id', partiesToDelete);
+    if (error) throw error;
+  }
+
+  // Insert new parties and update existing ones
+  for (const party of parties) {
+    if (party.id && existingPartyIds.includes(party.id)) {
+      // Update existing
+      const { error } = await supabase.from('case_parties').update({ ...party, user_id: userId }).eq('id', party.id);
+      if (error) throw error;
+    } else {
+      // Insert new
+      const { error } = await supabase.from('case_parties').insert({ ...party, case_id: caseId, user_id: userId });
+      if (error) throw error;
+    }
+  }
+};
+
+
+export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "user_id" | "client_name" | "case_parties" | "case_attachments" | "hearings" | "tasks" | "financial_transactions" | "adjournments"> & {
+  plaintiffs: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
+  defendants: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
+  other_parties?: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
+}): Promise<Case> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول.");
 
+  const { plaintiffs, defendants, other_parties, ...coreCaseData } = caseData;
+
   const { data, error } = await supabase
     .from("cases")
-    .insert({ ...caseData, user_id: user.id })
+    .insert({ ...coreCaseData, user_id: user.id, created_by: user.id, created_at: new Date().toISOString() })
     .select()
     .single();
 
@@ -114,13 +218,32 @@ export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "upd
     console.error("Error creating case:", error);
     throw new Error("فشل إنشاء القضية.");
   }
+
+  // Insert parties
+  const allParties = [
+    ...plaintiffs.map(p => ({ ...p, party_type: 'plaintiff' as const })),
+    ...defendants.map(p => ({ ...p, party_type: 'defendant' as const })),
+    ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
+  ];
+  await manageCaseParties(data.id, user.id, allParties as CaseParty[]);
+
   return data;
 };
 
-export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "created_at" | "updated_at" | "user_id" | "client_name">> & { id: string }): Promise<Case> => {
+export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "created_at" | "user_id" | "client_name" | "case_parties" | "case_attachments" | "hearings" | "tasks" | "financial_transactions" | "adjournments">> & {
+  id: string;
+  plaintiffs?: CaseParty[];
+  defendants?: CaseParty[];
+  other_parties?: CaseParty[];
+}): Promise<Case> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("المستخدم غير مسجل الدخول.");
+
+  const { plaintiffs, defendants, other_parties, ...coreCaseData } = caseData;
+
   const { data, error } = await supabase
     .from("cases")
-    .update({ ...caseData, updated_at: new Date().toISOString() })
+    .update({ ...coreCaseData, last_modified_by: user.id, last_modified_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();
@@ -129,6 +252,17 @@ export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "create
     console.error("Error updating case:", error);
     throw new Error("فشل تحديث القضية.");
   }
+
+  // Update parties if provided
+  if (plaintiffs || defendants || other_parties) {
+    const allParties = [
+      ...(plaintiffs || []).map(p => ({ ...p, party_type: 'plaintiff' as const })),
+      ...(defendants || []).map(p => ({ ...p, party_type: 'defendant' as const })),
+      ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
+    ];
+    await manageCaseParties(id, user.id, allParties as CaseParty[]);
+  }
+
   return data;
 };
 

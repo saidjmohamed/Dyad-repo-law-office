@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { judicialStructure } from "@/data/judicialStructure";
+import { caseCategoryOptions, procedureTypeOptions, jurisdictionSectionOptions, feesStatusOptions } from "@/data/caseOptions"; // استيراد الخيارات الجديدة
 
 type CaseData = Case; // استخدام النوع الموحد Case
 
@@ -41,24 +41,25 @@ const Cases = () => {
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCaseType, setFilterCaseType] = useState("");
-  const [filterCourt, setFilterCourt] = useState("");
+  const [filterCaseCategory, setFilterCaseCategory] = useState(""); // Renamed
+  const [filterProcedureType, setFilterProcedureType] = useState(""); // New filter
+  const [filterCourtName, setFilterCourtName] = useState(""); // Renamed
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterFilingDateFrom, setFilterFilingDateFrom] = useState<Date | undefined>(undefined);
-  const [filterFilingDateTo, setFilterFilingDateTo] = useState<Date | undefined>(undefined);
+  const [filterRegisteredAtFrom, setFilterRegisteredAtFrom] = useState<Date | undefined>(undefined); // Renamed
+  const [filterRegisteredAtTo, setFilterRegisteredAtTo] = useState<Date | undefined>(undefined); // Renamed
   const [filterClientId, setFilterClientId] = useState("");
 
   const queryClient = useQueryClient();
 
   const { data: cases, isLoading, isError } = useQuery<CaseData[]>({
-    queryKey: ["cases", searchTerm, filterCaseType, filterCourt, filterStatus, filterFilingDateFrom, filterFilingDateTo, filterClientId],
+    queryKey: ["cases", searchTerm, filterCaseCategory, filterProcedureType, filterCourtName, filterStatus, filterRegisteredAtFrom, filterRegisteredAtTo, filterClientId],
     queryFn: () => getCases({
       searchTerm,
-      filterCaseType,
-      filterCourt,
+      filterCaseCategory,
+      filterCourtName,
       filterStatus,
-      filterFilingDateFrom: filterFilingDateFrom?.toISOString(),
-      filterFilingDateTo: filterFilingDateTo?.toISOString(),
+      filterRegisteredAtFrom: filterRegisteredAtFrom?.toISOString(),
+      filterRegisteredAtTo: filterRegisteredAtTo?.toISOString(),
       filterClientId,
     }),
   });
@@ -104,11 +105,12 @@ const Cases = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
-    setFilterCaseType("");
-    setFilterCourt("");
+    setFilterCaseCategory("");
+    setFilterProcedureType("");
+    setFilterCourtName("");
     setFilterStatus("");
-    setFilterFilingDateFrom(undefined);
-    setFilterFilingDateTo(undefined);
+    setFilterRegisteredAtFrom(undefined);
+    setFilterRegisteredAtTo(undefined);
     setFilterClientId("");
   };
 
@@ -138,33 +140,27 @@ const Cases = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Select value={filterCaseType} onValueChange={setFilterCaseType}>
+            <Select value={filterCaseCategory} onValueChange={setFilterCaseCategory}>
               <SelectTrigger><SelectValue placeholder="نوع القضية" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="مدنية">مدنية</SelectItem>
-                <SelectItem value="جزائية">جزائية</SelectItem>
-                <SelectItem value="تجارية">تجارية</SelectItem>
-                <SelectItem value="إدارية">إدارية</SelectItem>
-                <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
-                <SelectItem value="عقارية">عقارية</SelectItem>
-                <SelectItem value="اجتماعية">اجتماعية</SelectItem>
+                {caseCategoryOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filterCourt} onValueChange={setFilterCourt}>
-              <SelectTrigger><SelectValue placeholder="جهة التقاضي" /></SelectTrigger>
+            <Select value={filterProcedureType} onValueChange={setFilterProcedureType}>
+              <SelectTrigger><SelectValue placeholder="نوع الإجراء" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={judicialStructure.tribunal.title}>{judicialStructure.tribunal.title}</SelectItem>
-                <SelectItem value={judicialStructure.court_of_appeal.title}>{judicialStructure.court_of_appeal.title}</SelectItem>
+                {procedureTypeOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Input
+              placeholder="اسم المحكمة/المجلس"
+              value={filterCourtName}
+              onChange={(e) => setFilterCourtName(e.target.value)}
+            />
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger><SelectValue placeholder="حالة القضية" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="جديدة">جديدة</SelectItem>
-                <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
-                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
-                <SelectItem value="مكتملة">مكتملة</SelectItem>
-                <SelectItem value="مغلقة">مغلقة</SelectItem>
+                {feesStatusOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterClientId} onValueChange={setFilterClientId}>
@@ -177,22 +173,22 @@ const Cases = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterFilingDateFrom ? format(filterFilingDateFrom, "PPP") : <span>تاريخ القيد (من)</span>}
+                  {filterRegisteredAtFrom ? format(filterRegisteredAtFrom, "PPP") : <span>تاريخ التسجيل (من)</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterFilingDateFrom} onSelect={setFilterFilingDateFrom} initialFocus />
+                <Calendar mode="single" selected={filterRegisteredAtFrom} onSelect={setFilterRegisteredAtFrom} initialFocus />
               </PopoverContent>
             </Popover>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterFilingDateTo ? format(filterFilingDateTo, "PPP") : <span>تاريخ القيد (إلى)</span>}
+                  {filterRegisteredAtTo ? format(filterRegisteredAtTo, "PPP") : <span>تاريخ التسجيل (إلى)</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterFilingDateTo} onSelect={setFilterFilingDateTo} initialFocus />
+                <Calendar mode="single" selected={filterRegisteredAtTo} onSelect={setFilterRegisteredAtTo} initialFocus />
               </PopoverContent>
             </Popover>
             <Button onClick={clearFilters} variant="outline">مسح الفلاتر</Button>
@@ -226,8 +222,8 @@ const Cases = () => {
                     <TableHead className="text-right">رقم القضية</TableHead>
                     <TableHead className="text-right">الموكل</TableHead>
                     <TableHead className="text-right">نوع القضية</TableHead>
-                    <TableHead className="text-right">جهة التقاضي</TableHead>
-                    <TableHead className="text-right">تاريخ القيد</TableHead>
+                    <TableHead className="text-right">نوع الإجراء</TableHead>
+                    <TableHead className="text-right">تاريخ التسجيل</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
@@ -236,12 +232,12 @@ const Cases = () => {
                   {cases && cases.length > 0 ? (
                     cases.map((caseItem: CaseData) => (
                       <TableRow key={caseItem.id}>
-                        <TableCell className="font-medium text-right">{caseItem.case_number}</TableCell>
+                        <TableCell className="font-medium text-right">{caseItem.case_number || "-"}</TableCell>
                         <TableCell className="text-right">{caseItem.client_name || "-"}</TableCell>
-                        <TableCell className="text-right">{caseItem.case_type}</TableCell>
-                        <TableCell className="text-right">{caseItem.court || "-"}</TableCell>
+                        <TableCell className="text-right">{caseItem.case_category}</TableCell>
+                        <TableCell className="text-right">{caseItem.procedure_type}</TableCell>
                         <TableCell className="text-right">
-                          {caseItem.filing_date ? format(new Date(caseItem.filing_date), "PPP") : "-"}
+                          {caseItem.registered_at ? format(new Date(caseItem.registered_at), "PPP") : "-"}
                         </TableCell>
                         <TableCell className="text-right">{caseItem.status || "جديدة"}</TableCell>
                         <TableCell className="text-right">
