@@ -1,235 +1,507 @@
-import { useEffect, useRef } from "react";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { caseSchema, CaseFormData } from "./actions";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { judicialStructure } from "@/data/judicialStructure";
+import { useQuery } from "@tanstack/react-query";
+import { getClients } from "../clients/actions";
+import { Case } from "./actions";
+import { useEffect } from "react";
+import { ar } from 'date-fns/locale';
+
+const formSchema = z.object({
+  case_type: z.string().min(1, "نوع القضية مطلوب"),
+  court: z.string().optional().nullable(),
+  division: z.string().optional().nullable(),
+  criminal_subtype: z.string().optional().nullable(), // حقل جديد
+  case_number: z.string().min(1, "رقم القضية مطلوب"),
+  filing_date: z.date().optional().nullable(),
+  role_in_favor: z.string().optional().nullable(),
+  role_against: z.string().optional().nullable(),
+  last_adjournment_date: z.date().optional().nullable(),
+  last_adjournment_reason: z.string().optional().nullable(),
+  next_hearing_date: z.date().optional().nullable(),
+  judgment_summary: z.string().optional().nullable(),
+  status: z.string().min(1, "الحالة مطلوبة"),
+  client_id: z.string().optional().nullable(),
+  fees_estimated: z.preprocess(
+    (val) => (val === "" ? null : Number(val)),
+    z.number().optional().nullable().refine((val) => val === null || val >= 0, {
+      message: "الرسوم المقدرة يجب أن تكون رقمًا موجبًا",
+    })
+  ),
+  notes: z.string().optional().nullable(),
+});
+
+type CaseFormValues = z.infer<typeof formSchema>;
 
 interface CaseFormProps {
-  onSubmit: (data: CaseFormData) => void;
-  isPending: boolean;
-  defaultValues?: Partial<CaseFormData> & { id?: string };
-  clients: { id: string; full_name: string }[];
+  initialData?: Case;
+  onSubmit: (data: CaseFormValues) => void;
+  isLoading: boolean;
 }
 
-export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFormProps) => {
-  const form = useForm<CaseFormData>({
-    resolver: zodResolver(caseSchema),
+const caseTypeOptions = [
+  { value: "قضية محكمة", label: "قضية محكمة" },
+  { value: "قضية جزائية", label: "قضية جزائية" },
+  { value: "قضية تجارية", label: "قضية تجارية" },
+  { value: "مجلس قضاء", label: "مجلس قضاء" },
+  { value: "مجلس دولة", label: "مجلس دولة" },
+  { value: "محكمة عليا", label: "محكمة عليا" },
+];
+
+const courtOptions = {
+  "قضية محكمة": ["محكمة سيدي امحمد", "محكمة بئر مراد رايس", "محكمة حسين داي", "محكمة باب الواد"],
+  "قضية جزائية": ["محكمة سيدي امحمد", "محكمة بئر مراد رايس", "محكمة حسين داي"],
+  "قضية تجارية": ["المحكمة التجارية بالجزائر", "المحكمة التجارية بوهران"],
+  "مجلس قضاء": ["مجلس قضاء الجزائر", "مجلس قضاء وهران", "مجلس قضاء قسنطينة"],
+  "مجلس دولة": ["مجلس الدولة"],
+  "محكمة عليا": ["المحكمة العليا"],
+};
+
+const divisionOptions = [
+  "عقاري",
+  "مدني",
+  "تجاري",
+  "استعجالي",
+  "اجتماعي",
+  "بحري",
+  "أحوال شخصية",
+  "إداري",
+];
+
+const criminalSubtypeOptions = [
+  "شكوى لوكيل جمهورية",
+  "شكوى مصحوبة بادعاء مدني لقاضي تحقيق",
+];
+
+const statusOptions = [
+  { value: "جديدة", label: "جديدة" },
+  { value: "قيد التنفيذ", label: "قيد التنفيذ" },
+  { value: "مؤجلة", label: "مؤجلة" },
+  { value: "مكتملة", label: "مكتملة" },
+  { value: "مغلقة", label: "مغلقة" },
+];
+
+export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) => {
+  const { data: clients, isLoading: isLoadingClients } = useQuery({
+    queryKey: ["clients"],
+    queryFn: getClients,
+  });
+
+  const form = useForm<CaseFormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      ...defaultValues,
-      filing_date: defaultValues?.filing_date ? new Date(defaultValues.filing_date) : undefined,
+      case_type: initialData?.case_type || "",
+      court: initialData?.court || "",
+      division: initialData?.division || "",
+      criminal_subtype: initialData?.criminal_subtype || "",
+      case_number: initialData?.case_number || "",
+      filing_date: initialData?.filing_date ? new Date(initialData.filing_date) : undefined,
+      role_in_favor: initialData?.role_in_favor || "",
+      role_against: initialData?.role_against || "",
+      last_adjournment_date: initialData?.last_adjournment_date ? new Date(initialData.last_adjournment_date) : undefined,
+      last_adjournment_reason: initialData?.last_adjournment_reason || "",
+      next_hearing_date: initialData?.next_hearing_date ? new Date(initialData.next_hearing_date) : undefined,
+      judgment_summary: initialData?.judgment_summary || "",
+      status: initialData?.status || "جديدة",
+      client_id: initialData?.client_id || "",
+      fees_estimated: initialData?.fees_estimated || 0,
+      notes: initialData?.notes || "",
     },
   });
 
-  const selectedCourt = form.watch("court");
-  const prevCourtRef = useRef<string | undefined>();
+  const selectedCaseType = form.watch("case_type");
 
+  // Reset conditional fields when case type changes
   useEffect(() => {
-    // Only reset the division if the court has actually been changed by the user
-    if (prevCourtRef.current !== undefined && selectedCourt !== prevCourtRef.current) {
-      form.setValue("division", "");
+    if (selectedCaseType !== "قضية جزائية") {
+      form.setValue("criminal_subtype", null);
     }
-    prevCourtRef.current = selectedCourt;
-  }, [selectedCourt, form]);
+    if (selectedCaseType === "قضية تجارية" || selectedCaseType === "مجلس دولة" || selectedCaseType === "محكمة عليا") {
+      form.setValue("division", null);
+    }
+    if (selectedCaseType === "مجلس دولة" || selectedCaseType === "محكمة عليا") {
+      form.setValue("court", selectedCaseType === "مجلس دولة" ? "مجلس الدولة" : "المحكمة العليا");
+    } else if (selectedCaseType !== "قضية محكمة" && selectedCaseType !== "قضية جزائية" && selectedCaseType !== "قضية تجارية" && selectedCaseType !== "مجلس قضاء") {
+      form.setValue("court", null);
+    }
+  }, [selectedCaseType, form]);
 
-  const divisions =
-    selectedCourt === judicialStructure.tribunal.title
-      ? judicialStructure.tribunal.sections
-      : selectedCourt === judicialStructure.court_of_appeal.title
-      ? judicialStructure.court_of_appeal.chambers
-      : [];
 
   return (
     <Form {...form}>
-      <form className="space-y-4">
-        <FormField
-          control={form.control}
-          name="client_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>الموكل</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الموكل..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="case_type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>نوع القضية</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر نوع القضية..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="مدنية">مدنية</SelectItem>
-                  <SelectItem value="جزائية">جزائية</SelectItem>
-                  <SelectItem value="تجارية">تجارية</SelectItem>
-                  <SelectItem value="إدارية">إدارية</SelectItem>
-                  <SelectItem value="أحوال شخصية">أحوال شخصية</SelectItem>
-                  <SelectItem value="عقارية">عقارية</SelectItem>
-                  <SelectItem value="اجتماعية">اجتماعية</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="court"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>جهة التقاضي</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر جهة التقاضي..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={judicialStructure.tribunal.title}>
-                    {judicialStructure.tribunal.title}
-                  </SelectItem>
-                  <SelectItem value={judicialStructure.court_of_appeal.title}>
-                    {judicialStructure.court_of_appeal.title}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="division"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>القسم / الغرفة</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCourt}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر القسم أو الغرفة..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {divisions.map((division) => (
-                    <SelectItem key={division} value={division}>
-                      {division}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="case_number"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>رقم القضية</FormLabel>
-              <FormControl>
-                <Input placeholder="أدخل رقم القضية..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="filing_date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>تاريخ القيد</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>اختر تاريخًا</span>
-                      )}
-                      <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value || undefined}
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="role_in_favor"
+            name="case_type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>صفة الموكل (لصالح)</FormLabel>
+                <FormLabel>نوع القضية</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر نوع القضية..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {caseTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {(selectedCaseType === "قضية محكمة" || selectedCaseType === "قضية جزائية" || selectedCaseType === "قضية تجارية" || selectedCaseType === "مجلس قضاء") && (
+            <FormField
+              control={form.control}
+              name="court"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>اسم المحكمة/المجلس</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر اسم المحكمة/المجلس..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {courtOptions[selectedCaseType as keyof typeof courtOptions]?.map((courtName) => (
+                        <SelectItem key={courtName} value={courtName}>
+                          {courtName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {(selectedCaseType === "قضية محكمة" || selectedCaseType === "مجلس قضاء") && (
+            <FormField
+              control={form.control}
+              name="division"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>القسم</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر القسم..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {divisionOptions.map((division) => (
+                        <SelectItem key={division} value={division}>
+                          {division}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {selectedCaseType === "قضية جزائية" && (
+            <FormField
+              control={form.control}
+              name="criminal_subtype"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>نوع القضية الجزائية</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر نوع القضية الجزائية..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {criminalSubtypeOptions.map((subtype) => (
+                        <SelectItem key={subtype} value={subtype}>
+                          {subtype}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          <FormField
+            control={form.control}
+            name="case_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>رقم القضية</FormLabel>
                 <FormControl>
-                  <Input placeholder="مدعي، مدعى عليه..." {...field} />
+                  <Input placeholder="أدخل رقم القضية" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="client_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>الموكل</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر موكلاً (اختياري)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoadingClients ? (
+                      <SelectItem value="" disabled>جاري التحميل...</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="">لا يوجد موكل</SelectItem>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.full_name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="filing_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>تاريخ التقديم</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ar })
+                        ) : (
+                          <span>اختر تاريخًا</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      initialFocus
+                      locale={ar}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="fees_estimated"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>الرسوم المقدرة</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="أدخل الرسوم المقدرة" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="role_in_favor"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>الطرف المدعي/المشتكي</FormLabel>
+                <FormControl>
+                  <Input placeholder="أدخل اسم الطرف المدعي/المشتكي" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="role_against"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>صفة الخصم (ضد)</FormLabel>
+                <FormLabel>الطرف المدعى عليه/المشتكى منه</FormLabel>
                 <FormControl>
-                  <Input placeholder="مدعي، مدعى عليه..." {...field} />
+                  <Input placeholder="أدخل اسم الطرف المدعى عليه/المشتكى منه" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>الحالة</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر حالة القضية..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="last_adjournment_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>تاريخ آخر تأجيل</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ar })
+                        ) : (
+                          <span>اختر تاريخًا</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      initialFocus
+                      locale={ar}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="last_adjournment_reason"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>سبب آخر تأجيل</FormLabel>
+                <FormControl>
+                  <Input placeholder="أدخل سبب آخر تأجيل" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="next_hearing_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>تاريخ الجلسة القادمة</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ar })
+                        ) : (
+                          <span>اختر تاريخًا</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      initialFocus
+                      locale={ar}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}
@@ -238,12 +510,12 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
 
         <FormField
           control={form.control}
-          name="fees_estimated"
+          name="judgment_summary"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>الأتعاب التقديرية</FormLabel>
+              <FormLabel>ملخص الحكم</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="أدخل مبلغ الأتعاب..." {...field} />
+                <Textarea placeholder="أدخل ملخص الحكم" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -257,15 +529,15 @@ export const CaseForm = ({ onSubmit, isPending, defaultValues, clients }: CaseFo
             <FormItem>
               <FormLabel>ملاحظات</FormLabel>
               <FormControl>
-                <Textarea placeholder="أضف ملاحظات حول القضية..." {...field} />
+                <Textarea placeholder="أدخل أي ملاحظات إضافية" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending}>
-          {isPending ? "جاري الحفظ..." : "حفظ"}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "جاري الحفظ..." : "حفظ القضية"}
         </Button>
       </form>
     </Form>
