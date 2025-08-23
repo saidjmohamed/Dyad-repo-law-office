@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
-  console.log("Edge Function 'get-google-calendar-events' received request."); // سجل تصحيح الأخطاء
+serve(async (req: Request) => {
+  console.log("Edge Function 'get-google-calendar-events' received request.");
   const authHeader = req.headers.get('authorization');
-  console.log("Authorization Header in get-google-calendar-events:", authHeader); // سجل تصحيح الأخطاء لرأس Authorization
+  console.log("Authorization Header in get-google-calendar-events:", authHeader);
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -35,7 +35,6 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
       });
     }
 
-    // Get user's Google integration tokens
     const { data: integration, error: integrationError } = await supabaseAdmin
       .from('user_integrations')
       .select('google_access_token, google_refresh_token')
@@ -51,10 +50,8 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
     }
 
     let accessToken = integration.google_access_token;
-    const refreshToken = integration.google_refresh_token; // Keep refresh token constant for now
+    const refreshToken = integration.google_refresh_token;
 
-    // Check if access token is expired and refresh if necessary
-    // A more robust solution would store token expiry time.
     if (refreshToken) {
       const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -73,7 +70,6 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
 
       if (refreshData.error) {
         console.error('Error refreshing Google access token:', refreshData.error_description || refreshData.error);
-        // If refresh fails, clear tokens and ask user to re-authenticate
         await supabaseAdmin
           .from('user_integrations')
           .update({ google_access_token: null, google_refresh_token: null })
@@ -85,14 +81,12 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
       }
 
       accessToken = refreshData.access_token;
-      // Update tokens in DB if new access token is received
       await supabaseAdmin
         .from('user_integrations')
         .update({ google_access_token: accessToken })
         .eq('user_id', user_id);
     }
 
-    // Fetch Google Calendar events
     const calendarResponse = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}&singleEvents=true&orderBy=startTime`,
       {
@@ -119,7 +113,7 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
       start: event.start.dateTime || event.start.date,
       end: event.end.dateTime || event.end.date,
       url: event.htmlLink,
-      backgroundColor: '#4285F4', // Google blue
+      backgroundColor: '#4285F4',
       borderColor: '#4285F4',
       extendedProps: {
         type: 'google-calendar',
@@ -134,10 +128,18 @@ serve(async (req: Request) => { // تحديد نوع 'req' كـ 'Request'
     });
 
   } catch (error) {
-    console.error('Error in get-google-calendar-events function:', (error as Error).message); // تأكيد نوع الخطأ
-    return new Response(JSON.stringify({ error: (error as Error).message }), { // تأكيد نوع الخطأ
+    console.error('Error in get-google-calendar-events function:', (error as Error).message);
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
   }
+}, {
+  onError: (error: unknown) => {
+    console.error("Unhandled error in get-google-calendar-events:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
+  },
 });

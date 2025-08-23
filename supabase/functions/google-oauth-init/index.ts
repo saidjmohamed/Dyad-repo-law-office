@@ -7,9 +7,9 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
-  console.log("Edge Function 'google-oauth-init' received request."); // سجل تصحيح الأخطاء
+  console.log("Edge Function 'google-oauth-init' received request.");
   const authHeader = req.headers.get('authorization');
-  console.log("Authorization Header in google-oauth-init:", authHeader); // سجل تصحيح الأخطاء لرأس Authorization
+  console.log("Authorization Header in google-oauth-init:", authHeader);
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,8 +23,8 @@ serve(async (req: Request) => {
     authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URL);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email');
-    authUrl.searchParams.set('access_type', 'offline'); // To get a refresh token
-    authUrl.searchParams.set('prompt', 'consent'); // To ensure refresh token is always granted
+    authUrl.searchParams.set('access_type', 'offline');
+    authUrl.searchParams.set('prompt', 'consent');
 
     return new Response(JSON.stringify({ authUrl: authUrl.toString() }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -37,4 +37,12 @@ serve(async (req: Request) => {
       status: 500,
     });
   }
+}, {
+  onError: (error: unknown) => {
+    console.error("Unhandled error in google-oauth-init:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
+  },
 });

@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -19,7 +19,6 @@ serve(async (req) => {
 
     if (error) {
       console.error('Google OAuth callback error:', error);
-      // Redirect to a client-side error page or display error
       return new Response(`Error: ${error}`, { status: 400 });
     }
 
@@ -27,7 +26,6 @@ serve(async (req) => {
       return new Response('Authorization code not found.', { status: 400 });
     }
 
-    // Exchange authorization code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -51,7 +49,6 @@ serve(async (req) => {
 
     const { access_token, refresh_token } = tokenData;
 
-    // Get user info to link with Supabase auth.uid()
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         Authorization: `Bearer ${access_token}`,
@@ -60,7 +57,6 @@ serve(async (req) => {
     const userInfo = await userInfoResponse.json();
     const userEmail = userInfo.email;
 
-    // Initialize Supabase client with service role key to bypass RLS for this operation
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         persistSession: false,
@@ -69,7 +65,6 @@ serve(async (req) => {
       },
     });
 
-    // Get the user from Supabase auth.users table using their email
     const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers({ email: userEmail });
 
     if (userError || !users || users.length === 0) {
@@ -79,7 +74,6 @@ serve(async (req) => {
 
     const supabaseUser = users[0];
 
-    // Store tokens in user_integrations table
     const { error: dbError } = await supabaseAdmin
       .from('user_integrations')
       .upsert(
@@ -87,7 +81,6 @@ serve(async (req) => {
           user_id: supabaseUser.id,
           google_access_token: access_token,
           google_refresh_token: refresh_token,
-          // Optionally fetch and store primary calendar ID here if needed
         },
         { onConflict: 'user_id' }
       );
@@ -97,23 +90,30 @@ serve(async (req) => {
       return new Response(`Error storing tokens: ${dbError.message}`, { status: 500 });
     }
 
-    // Redirect back to the application's calendar page
-    // You might want to pass a success message or status
     const redirectUrl = new URL(req.url);
     const appBaseUrl = `${redirectUrl.protocol}//${redirectUrl.host}`;
     return new Response(null, {
-      status: 303, // See Other
+      status: 303,
       headers: {
-        'Location': `${appBaseUrl}/calendar?google_auth_success=true`, // Redirect to your app's calendar page
+        'Location': `${appBaseUrl}/calendar?google_auth_success=true`,
         ...corsHeaders,
       },
     });
 
   } catch (error) {
     console.error('Error in Google OAuth callback:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
   }
+}, {
+  onError: (error: unknown) => {
+    console.error("Unhandled error in google-oauth-callback:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
+  },
 });
