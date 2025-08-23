@@ -28,43 +28,73 @@ serve(async (req: Request) => {
   }
 
   try {
-    // @ts-ignore
-    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = Deno.env.toObject();
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    console.log("create-backup: Received request.");
+    console.log("create-backup: Request method:", req.method);
+    console.log("create-backup: Content-Type header:", req.headers.get('Content-Type'));
+    console.log("create-backup: Authorization header:", req.headers.get('Authorization'));
 
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
+      console.error("create-backup: No authorization token provided.");
       return new Response(JSON.stringify({ error: 'No authorization token provided.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
 
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: userError } = await createClient(
+      // @ts-ignore
+      Deno.env.get('SUPABASE_URL'),
+      // @ts-ignore
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      }
+    ).auth.getUser(token);
 
     if (userError || !user) {
-      console.error('Error getting user from token:', userError?.message);
+      console.error('create-backup: Error getting user from token:', userError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
 
-    const { format, tables: selectedTables } = await req.json();
+    console.log("create-backup: User authenticated:", user.id);
+
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log("create-backup: Successfully parsed request body:", JSON.stringify(requestBody));
+    } catch (jsonError) {
+      console.error("create-backup: Error parsing request JSON:", (jsonError as Error).message);
+      // Attempt to read raw body for more context if JSON parsing failed
+      try {
+        const rawBody = await req.text();
+        console.error("create-backup: Raw request body (if available):", rawBody);
+      } catch (readError) {
+        console.error("create-backup: Could not read raw body:", (readError as Error).message);
+      }
+      return new Response(JSON.stringify({ error: `Failed to parse request body: ${(jsonError as Error).message}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+
+    const { format, tables: selectedTables } = requestBody;
 
     const tablesToProcess = selectedTables && selectedTables.length > 0
       ? TABLES_TO_BACKUP.filter(table => selectedTables.includes(table))
       : TABLES_TO_BACKUP;
 
     if (tablesToProcess.length === 0) {
+      console.error("create-backup: No tables selected for backup or invalid tables provided.");
       return new Response(JSON.stringify({ error: 'No tables selected for backup or invalid tables provided.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -74,9 +104,21 @@ serve(async (req: Request) => {
     const backupData: { [key: string]: any[] } = {};
 
     for (const table of tablesToProcess) {
-      const { data, error } = await supabaseAdmin.from(table).select('*');
+      const { data, error } = await createClient(
+        // @ts-ignore
+        Deno.env.get('SUPABASE_URL'),
+        // @ts-ignore
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      ).from(table).select('*');
       if (error) {
-        console.error(`Error fetching data from table ${table}:`, error);
+        console.error(`create-backup: Error fetching data from table ${table}:`, error);
         // Continue to next table, but log the error
       } else {
         backupData[table] = data;
@@ -107,7 +149,19 @@ serve(async (req: Request) => {
     const filename = `backup-${timestamp}.${fileExtension}`;
     const filePath = `${user.id}/${filename}`;
 
-    const { error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await createClient(
+      // @ts-ignore
+      Deno.env.get('SUPABASE_URL'),
+      // @ts-ignore
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      }
+    ).storage
       .from('backups')
       .upload(filePath, backupContent, {
         contentType,
@@ -115,17 +169,40 @@ serve(async (req: Request) => {
       });
 
     if (uploadError) {
-      console.error('Error uploading backup to storage:', uploadError);
+      console.error('create-backup: Error uploading backup to storage:', uploadError);
       return new Response(JSON.stringify({ error: 'Failed to upload backup file.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    const { data: { publicUrl } } = supabaseAdmin.storage.from('backups').getPublicUrl(filePath);
+    const { data: { publicUrl } } = createClient(
+      // @ts-ignore
+      Deno.env.get('SUPABASE_URL'),
+      // @ts-ignore
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      }
+    ).storage.from('backups').getPublicUrl(filePath);
 
-    const { error: insertError } = await supabaseAdmin
-      .from('backups')
+    const { error: insertError } = await createClient(
+      // @ts-ignore
+      Deno.env.get('SUPABASE_URL'),
+      // @ts-ignore
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      }
+    ).from('backups')
       .insert({
         user_id: user.id,
         filename,
@@ -135,8 +212,21 @@ serve(async (req: Request) => {
       });
 
     if (insertError) {
-      console.error('Error inserting backup metadata:', insertError);
-      await supabaseAdmin.storage.from('backups').remove([filePath]);
+      console.error('create-backup: Error inserting backup metadata:', insertError);
+      // Attempt to delete the uploaded file to prevent orphans
+      await createClient(
+        // @ts-ignore
+        Deno.env.get('SUPABASE_URL'),
+        // @ts-ignore
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      ).storage.from('backups').remove([filePath]);
       return new Response(JSON.stringify({ error: 'Failed to record backup metadata.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -149,7 +239,7 @@ serve(async (req: Request) => {
     });
 
   } catch (error) {
-    console.error('Error in create-backup function:', (error as Error).message);
+    console.error('create-backup: Unhandled error in create-backup function:', (error as Error).message);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
