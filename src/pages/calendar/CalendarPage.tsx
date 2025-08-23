@@ -76,9 +76,24 @@ const CalendarPage = () => {
     queryKey: ['googleEvents', userId],
     queryFn: async () => {
       if (!userId || !isGoogleCalendarConnected) return [];
+
+      // Ensure session is fresh before invoking
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.error('Error refreshing session for Google events:', refreshError?.message);
+        showError("فشل تحديث الجلسة لتقويم Google. يرجى تسجيل الدخول مرة أخرى.");
+        await supabase.auth.signOut();
+        navigate('/login');
+        return [];
+      }
+      const session = refreshData.session;
+
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
         method: 'POST',
         body: { user_id: userId },
+        headers: { // Explicitly pass Authorization header
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
@@ -140,9 +155,19 @@ const CalendarPage = () => {
 
   const handleConnectGoogleCalendar = async () => {
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Attempt to refresh the session first
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
 
-      if (sessionError || !session) {
+      if (refreshError) {
+        showError(`فشل تحديث الجلسة: ${refreshError.message}. يرجى تسجيل الدخول مرة أخرى.`);
+        await supabase.auth.signOut(); // Force sign out if refresh fails
+        navigate('/login');
+        return;
+      }
+
+      const session = refreshData.session;
+
+      if (!session) {
         showError("يجب أن تكون مسجلاً للدخول لربط تقويم Google.");
         return;
       }
