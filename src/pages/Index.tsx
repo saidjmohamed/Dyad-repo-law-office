@@ -7,15 +7,19 @@ import { DashboardStatCard } from "@/components/DashboardStatCard";
 import { Briefcase, CalendarClock, Users, ListTodo } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { CaseTypePieChart } from "@/components/charts/CaseTypePieChart";
+import { MonthlyCaseBarChart } from "@/components/charts/MonthlyCaseBarChart";
+import { ar } from 'date-fns/locale'; // استيراد اللغة العربية لـ date-fns
+import { useMemo } from 'react'; // تم إضافة استيراد useMemo
 
 // Define types for data fetched from queries
 type Client = { id: string; full_name: string; };
-type Case = { id: string; status: string; case_number: string; client_name: string; };
-type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; case_id: string; }; // Added case_id
-type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; case_id?: string | null; }; // Added case_id
+type Case = { id: string; status: string; case_number: string; client_name: string; case_type: string; filing_date?: string | null; };
+type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; case_id: string; };
+type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; case_id?: string | null; };
 
 const Index = () => {
   const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
@@ -46,6 +50,7 @@ const Index = () => {
 
   const upcomingHearingsList = hearings
     ?.filter(h => new Date(h.hearing_date) >= new Date())
+    .sort((a, b) => new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime())
     .slice(0, 5);
 
   const pendingTasksList = tasks
@@ -64,6 +69,41 @@ const Index = () => {
       default: return 'default';
     }
   };
+
+  // Prepare data for CaseTypePieChart
+  const caseTypeData = useMemo(() => {
+    if (!cases) return [];
+    const typeCounts: { [key: string]: number } = {};
+    cases.forEach(c => {
+      typeCounts[c.case_type] = (typeCounts[c.case_type] || 0) + 1;
+    });
+    return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
+  }, [cases]);
+
+  // Prepare data for MonthlyCaseBarChart
+  const monthlyCaseData = useMemo(() => {
+    if (!cases) return [];
+    const monthCounts: { [key: string]: number } = {};
+    cases.forEach(c => {
+      if (c.filing_date) {
+        const date = parseISO(c.filing_date);
+        const monthYear = format(date, "MMM yyyy", { locale: ar }); // تنسيق الشهر والسنة باللغة العربية
+        monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1;
+      }
+    });
+    // Sort by date to ensure correct order
+    const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
+      const dateA = parseISO(a.replace(/(\S+) (\d{4})/, '01 $1 $2')); // Dummy day for parsing
+      const dateB = parseISO(b.replace(/(\S+) (\d{4})/, '01 $1 $2'));
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    return sortedMonths.map(monthYear => ({
+      name: monthYear,
+      cases: monthCounts[monthYear],
+    }));
+  }, [cases]);
+
 
   return (
     <div>
@@ -99,6 +139,15 @@ const Index = () => {
         />
       </div>
 
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <div className="lg:col-span-1">
+          <CaseTypePieChart data={caseTypeData} isLoading={isLoadingCases} />
+        </div>
+        <div className="lg:col-span-2">
+          <MonthlyCaseBarChart data={monthlyCaseData} isLoading={isLoadingCases} />
+        </div>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -120,7 +169,7 @@ const Index = () => {
                 ) : upcomingHearingsList && upcomingHearingsList.length > 0 ? (
                   upcomingHearingsList.map(hearing => (
                     <TableRow key={hearing.id}>
-                      <TableCell>{format(new Date(hearing.hearing_date), "yyyy/MM/dd")}</TableCell>
+                      <TableCell>{format(new Date(hearing.hearing_date), "yyyy/MM/dd", { locale: ar })}</TableCell>
                       <TableCell>
                         <Link to={`/cases/${hearing.case_id}`} className="hover:underline text-primary">
                           {hearing.case_number}

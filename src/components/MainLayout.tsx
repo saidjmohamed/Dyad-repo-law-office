@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarNav } from "./SidebarNav";
 import {
@@ -17,19 +17,28 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
+import { getProfile } from "@/pages/settings/actions"; // استيراد دالة جلب الملف الشخصي
 
 const MainLayout = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+  });
+
   useEffect(() => {
     const fetchUserName = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Assuming user_metadata might contain a full_name or similar
-        // Or you might fetch from your public.users table if you have a profile setup
-        setUserName(user.user_metadata.full_name || user.email);
+        // Use profile data if available, otherwise fallback to email
+        setUserName(profile?.first_name && profile?.last_name 
+          ? `${profile.first_name} ${profile.last_name}` 
+          : user.user_metadata.full_name || user.email);
       }
     };
 
@@ -37,18 +46,27 @@ const MainLayout = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUserName(session.user.user_metadata.full_name || session.user.email);
+        // Update user name based on session or profile
+        setUserName(profile?.first_name && profile?.last_name 
+          ? `${profile.first_name} ${profile.last_name}` 
+          : session.user.user_metadata.full_name || session.user.email);
       } else {
         setUserName(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [profile, navigate]); // إضافة profile كاعتمادية
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
+  };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    const first = firstName?.[0] || '';
+    const last = lastName?.[0] || '';
+    return `${first}${last}`.toUpperCase() || "MS";
   };
 
   return (
@@ -84,13 +102,23 @@ const MainLayout = () => {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <UserCircle className="w-6 h-6" />
+              <Button variant="ghost" className="rounded-full h-9 w-9 p-0">
+                {isLoadingProfile ? (
+                  <UserCircle className="w-6 h-6" />
+                ) : (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={userName || "User"} />
+                    <AvatarFallback>{getInitials(profile?.first_name, profile?.last_name)}</AvatarFallback>
+                  </Avatar>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{userName || "حسابي"}</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/settings">الإعدادات</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 تسجيل الخروج
               </DropdownMenuItem>
