@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // استيراد useQueryClient
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -18,7 +18,7 @@ const CalendarPage = () => {
   const navigate = useNavigate();
   const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const queryClient = useQueryClient(); // تعريف queryClient هنا
+  const queryClient = useQueryClient();
 
   // Fetch user ID on component mount
   useEffect(() => {
@@ -35,7 +35,7 @@ const CalendarPage = () => {
   useEffect(() => {
     const checkConnection = async () => {
       if (userId) {
-        const { data } = await supabase // تم إزالة 'error' لأنه غير مستخدم
+        const { data } = await supabase
           .from('user_integrations')
           .select('google_access_token')
           .eq('user_id', userId)
@@ -140,8 +140,18 @@ const CalendarPage = () => {
 
   const handleConnectGoogleCalendar = async () => {
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        showError("يجب أن تكون مسجلاً للدخول لربط تقويم Google.");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('google-oauth-init', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
