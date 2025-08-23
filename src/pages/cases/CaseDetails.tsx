@@ -9,6 +9,8 @@ import { CaseHearings } from "./CaseHearings";
 import { CaseTasks } from "./CaseTasks";
 import { CaseDocuments } from "./CaseDocuments";
 import { CaseFinancials } from "./CaseFinancials";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign } from "lucide-react";
 
 // Define types for the fetched data
 type Client = {
@@ -75,7 +77,7 @@ type CaseDetailsData = {
 };
 
 const CaseDetails = () => {
-  const { caseId } = useParams<{ caseId: string }>(); // Changed id to caseId for clarity
+  const { caseId } = useParams<{ caseId: string }>();
 
   const { data: caseDetails, isLoading, isError } = useQuery<CaseDetailsData>({
     queryKey: ["case", caseId],
@@ -91,11 +93,8 @@ const CaseDetails = () => {
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
         </div>
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );
@@ -117,46 +116,68 @@ const CaseDetails = () => {
         <Badge>{caseDetails.status || "جديدة"}</Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader><CardTitle>معلومات أساسية</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p><strong>الموكل:</strong> {caseDetails.clients?.full_name || "غير محدد"}</p>
-            <p><strong>نوع القضية:</strong> {caseDetails.case_type}</p>
-            <p><strong>جهة التقاضي:</strong> {caseDetails.court}</p>
-            <p><strong>القسم/الغرفة:</strong> {caseDetails.division || "-"}</p>
-            <p><strong>تاريخ القيد:</strong> {caseDetails.filing_date ? format(new Date(caseDetails.filing_date), "PPP") : "-"}</p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+          <TabsTrigger value="details"><Briefcase className="w-4 h-4 ml-2" />التفاصيل</TabsTrigger>
+          <TabsTrigger value="hearings"><CalendarClock className="w-4 h-4 ml-2" />الجلسات</TabsTrigger>
+          <TabsTrigger value="tasks"><ListTodo className="w-4 h-4 ml-2" />المهام</TabsTrigger>
+          <TabsTrigger value="documents"><FileText className="w-4 h-4 ml-2" />المستندات</TabsTrigger>
+          <TabsTrigger value="financials"><DollarSign className="w-4 h-4 ml-2" />الأمور المالية</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader><CardTitle>الأطراف</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p><strong>صفة الموكل:</strong> {caseDetails.role_in_favor || "-"}</p>
-            <p><strong>صفة الخصم:</strong> {caseDetails.role_against || "-"}</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="details" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader><CardTitle>معلومات أساسية</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p><strong>الموكل:</strong> {caseDetails.clients?.full_name || "غير محدد"}</p>
+                <p><strong>نوع القضية:</strong> {caseDetails.case_type}</p>
+                <p><strong>جهة التقاضي:</strong> {caseDetails.court}</p>
+                <p><strong>القسم/الغرفة:</strong> {caseDetails.division || "-"}</p>
+                <p><strong>تاريخ القيد:</strong> {caseDetails.filing_date ? format(new Date(caseDetails.filing_date), "PPP") : "-"}</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader><CardTitle>الأتعاب التقديرية</CardTitle></CardHeader>
-          <CardContent>
-            <p><strong>الأتعاب التقديرية:</strong> {caseDetails.fees_estimated ? `${caseDetails.fees_estimated} د.ج` : "-"}</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader><CardTitle>الأطراف</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p><strong>صفة الموكل:</strong> {caseDetails.role_in_favor || "-"}</p>
+                <p><strong>صفة الخصم:</strong> {caseDetails.role_against || "-"}</p>
+              </CardContent>
+            </Card>
 
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader><CardTitle>ملاحظات</CardTitle></CardHeader>
-          <CardContent>
-            <p>{caseDetails.notes || "لا توجد ملاحظات."}</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader><CardTitle>الأتعاب التقديرية</CardTitle></CardHeader>
+              <CardContent>
+                <p><strong>الأتعاب التقديرية:</strong> {caseDetails.fees_estimated ? `${caseDetails.fees_estimated} د.ج` : "-"}</p>
+              </CardContent>
+            </Card>
 
-      {/* Related Entities Sections */}
-      <CaseHearings caseId={caseDetails.id} hearings={caseDetails.hearings} />
-      <CaseTasks caseId={caseDetails.id} tasks={caseDetails.tasks} />
-      <CaseDocuments caseId={caseDetails.id} files={caseDetails.case_files} />
-      <CaseFinancials caseId={caseDetails.id} transactions={caseDetails.financial_transactions} />
+            <Card className="md:col-span-2 lg:col-span-3">
+              <CardHeader><CardTitle>ملاحظات</CardTitle></CardHeader>
+              <CardContent>
+                <p>{caseDetails.notes || "لا توجد ملاحظات."}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hearings" className="mt-6">
+          <CaseHearings caseId={caseDetails.id} hearings={caseDetails.hearings} />
+        </TabsContent>
+
+        <TabsContent value="tasks" className="mt-6">
+          <CaseTasks caseId={caseDetails.id} tasks={caseDetails.tasks} />
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6">
+          <CaseDocuments caseId={caseDetails.id} files={caseDetails.case_files} />
+        </TabsContent>
+
+        <TabsContent value="financials" className="mt-6">
+          <CaseFinancials caseId={caseDetails.id} transactions={caseDetails.financial_transactions} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
