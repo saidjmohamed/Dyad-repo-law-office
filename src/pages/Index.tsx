@@ -67,7 +67,10 @@ const Index = () => {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">لوحة التحكم</h1>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">مكتب الأستاذ سايج محمد</h1>
+        <p className="text-gray-600 dark:text-gray-400">لوحة التحكم الرئيسية</p>
+      </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <DashboardStatCard

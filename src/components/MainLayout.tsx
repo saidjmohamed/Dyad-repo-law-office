@@ -56,7 +56,7 @@ const MainLayout = () => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:flex-col md:w-64 bg-gray-50 border-l border-gray-200 dark:bg-gray-900 dark:border-gray-800">
         <div className="flex items-center h-16 px-6 border-b dark:border-gray-800">
-          <h1 className="text-lg font-semibold">مكتب المحاماة</h1>
+          <h1 className="text-lg font-semibold">مكتب الأستاذ سايج محمد</h1>
         </div>
         <SidebarNav />
       </aside>

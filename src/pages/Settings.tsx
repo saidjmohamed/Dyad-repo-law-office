@@ -1,10 +1,45 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, Briefcase, MapPin } from "lucide-react";
+
 const Settings = () => {
+  const professionalInfo = {
+    name: "محمد سايج",
+    title: "محام لدى مجلس قضاء الجزائر",
+    address: "12 شارع الإخوة الثلاثة بوعدو، بئر مراد رايس، الجزائر",
+  };
+
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-4">الإعدادات</h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        هنا يمكنك إدارة إعدادات التطبيق (الميزات المستقبلية).
-      </p>
+      <h1 className="text-3xl font-bold mb-6">الإعدادات</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>المعلومات المهنية</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center">
+            <User className="w-5 h-5 ml-3 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">الاسم الكامل</p>
+              <p className="font-medium">{professionalInfo.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <Briefcase className="w-5 h-5 ml-3 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">المهنة</p>
+              <p className="font-medium">{professionalInfo.title}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <MapPin className="w-5 h-5 ml-3 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">العنوان المهني</p>
+              <p className="font-medium">{professionalInfo.address}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
