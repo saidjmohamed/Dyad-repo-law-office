@@ -12,14 +12,15 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { CaseTypePieChart } from "@/components/charts/CaseTypePieChart";
 import { MonthlyCaseBarChart } from "@/components/charts/MonthlyCaseBarChart";
-import { ar } from 'date-fns/locale'; // استيراد اللغة العربية لـ date-fns
-import { useMemo } from 'react'; // تم إضافة استيراد useMemo
+import { ar } from 'date-fns/locale';
+import { useMemo } from 'react';
+import { Case as CaseType } from "./cases/actions"; // استيراد نوع Case من actions.ts
 
 // Define types for data fetched from queries
 type Client = { id: string; full_name: string; };
-type Case = { id: string; status: string; case_number: string; client_name: string; case_type: string; filing_date?: string | null; };
-type Hearing = { id: string; hearing_date: string; case_number: string; client_name: string; case_id: string; };
-type Task = { id: string; done: boolean; priority: string; title: string; due_date: string; case_id?: string | null; };
+type Case = CaseType; // استخدام النوع المستورد
+type Hearing = { id: string; hearing_date: string; case_number: string | null | undefined; client_name: string | null | undefined; case_id: string; };
+type Task = { id: string; done: boolean; priority: string | null | undefined; title: string; due_date: string | null | undefined; case_id?: string | null; };
 
 const Index = () => {
   const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
@@ -28,7 +29,7 @@ const Index = () => {
   });
   const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases(),
+    queryFn: () => getCases({}), // تمرير كائن مرشحات فارغ
   });
   const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ["hearings"],
@@ -43,7 +44,7 @@ const Index = () => {
 
   const stats = {
     totalClients: clients?.length ?? 0,
-    activeCases: cases?.filter(c => c.status !== "مكتملة").length ?? 0,
+    activeCases: cases?.filter((c: Case) => c.status !== "مكتملة").length ?? 0,
     upcomingHearings: hearings?.filter(h => new Date(h.hearing_date) >= new Date()).length ?? 0,
     pendingTasks: tasks?.filter(t => !t.done).length ?? 0,
   };
@@ -57,11 +58,11 @@ const Index = () => {
     ?.filter(t => !t.done)
     .sort((a, b) => {
         const priorityOrder: { [key: string]: number } = { 'عالية': 1, 'متوسط': 2, 'منخفضة': 3 };
-        return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+        return (priorityOrder[a.priority || 'متوسط'] || 2) - (priorityOrder[b.priority || 'متوسط'] || 2);
     })
     .slice(0, 5);
 
-  const getPriorityBadgeVariant = (priority: string | null) => {
+  const getPriorityBadgeVariant = (priority: string | null | undefined) => {
     switch (priority) {
       case 'عالية': return 'destructive';
       case 'متوسط': return 'secondary';
@@ -74,7 +75,7 @@ const Index = () => {
   const caseTypeData = useMemo(() => {
     if (!cases) return [];
     const typeCounts: { [key: string]: number } = {};
-    cases.forEach(c => {
+    cases.forEach((c: Case) => {
       typeCounts[c.case_type] = (typeCounts[c.case_type] || 0) + 1;
     });
     return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
@@ -84,7 +85,7 @@ const Index = () => {
   const monthlyCaseData = useMemo(() => {
     if (!cases) return [];
     const monthCounts: { [key: string]: number } = {};
-    cases.forEach(c => {
+    cases.forEach((c: Case) => {
       if (c.filing_date) {
         const date = parseISO(c.filing_date);
         const monthYear = format(date, "MMM yyyy", { locale: ar }); // تنسيق الشهر والسنة باللغة العربية

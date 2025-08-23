@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCases, deleteCase } from "./actions";
+import { getCases, deleteCase, Case } from "./actions"; // استيراد Case من actions
 import { getClients } from "../clients/actions";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Pencil, Trash2, Eye } from "lucide-react";
@@ -32,17 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { judicialStructure } from "@/data/judicialStructure";
 
-type CaseData = {
-  id: string;
-  case_type: string;
-  court: string;
-  division?: string | null;
-  case_number: string;
-  filing_date?: string | null;
-  status?: string | null;
-  clients?: { full_name: string } | null;
-  [key: string]: any;
-};
+type CaseData = Case; // استخدام النوع الموحد Case
 
 const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -171,10 +161,10 @@ const Cases = () => {
               <SelectTrigger><SelectValue placeholder="حالة القضية" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="جديدة">جديدة</SelectItem>
+                <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
                 <SelectItem value="مؤجلة">مؤجلة</SelectItem>
-                <SelectItem value="للحكم">للحكم</SelectItem>
-                <SelectItem value="محكومة">محكومة</SelectItem>
-                <SelectItem value="منتهية">منتهية</SelectItem>
+                <SelectItem value="مكتملة">مكتملة</SelectItem>
+                <SelectItem value="مغلقة">مغلقة</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterClientId} onValueChange={setFilterClientId}>
@@ -244,12 +234,12 @@ const Cases = () => {
                 </TableHeader>
                 <TableBody>
                   {cases && cases.length > 0 ? (
-                    cases.map((caseItem) => (
+                    cases.map((caseItem: CaseData) => (
                       <TableRow key={caseItem.id}>
                         <TableCell className="font-medium text-right">{caseItem.case_number}</TableCell>
-                        <TableCell className="text-right">{caseItem.clients?.full_name || "-"}</TableCell>
+                        <TableCell className="text-right">{caseItem.client_name || "-"}</TableCell>
                         <TableCell className="text-right">{caseItem.case_type}</TableCell>
-                        <TableCell className="text-right">{caseItem.court}</TableCell>
+                        <TableCell className="text-right">{caseItem.court || "-"}</TableCell>
                         <TableCell className="text-right">
                           {caseItem.filing_date ? format(new Date(caseItem.filing_date), "PPP") : "-"}
                         </TableCell>

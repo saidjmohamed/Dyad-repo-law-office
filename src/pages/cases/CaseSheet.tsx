@@ -6,20 +6,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { CaseForm } from "./CaseForm";
-import { createCase, updateCase, CaseFormData } from "./actions";
+import { CaseForm, CaseFormValues } from "./CaseForm"; // استيراد CaseFormValues
+import { createCase, updateCase, Case } from "./actions"; // استخدام Case من actions
 import { getClients } from "../clients/actions";
 import { showSuccess, showError } from "@/utils/toast";
-
-type CaseData = {
-  id: string;
-  [key: string]: any;
-};
 
 interface CaseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseData?: CaseData | null;
+  caseData?: Case | null; // استخدام نوع Case الموحد
 }
 
 export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
@@ -46,6 +41,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     mutationFn: updateCase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["case", caseData?.id] }); // Invalidate specific case details
       showSuccess("تم تحديث القضية بنجاح.");
       onOpenChange(false);
     },
@@ -54,7 +50,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     },
   });
 
-  const onSubmit = (data: CaseFormData) => {
+  const onSubmit = (data: CaseFormValues) => { // استخدام CaseFormValues
     if (caseData) {
       updateMutation.mutate({ id: caseData.id, ...data });
     } else {
@@ -76,8 +72,8 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
         ) : (
           <CaseForm
             onSubmit={onSubmit}
-            isPending={createMutation.isPending || updateMutation.isPending}
-            defaultValues={caseData || {}}
+            isLoading={createMutation.isPending || updateMutation.isPending} // استخدام isLoading
+            initialData={caseData || undefined} // تمرير initialData بدلاً من defaultValues
             clients={clients || []}
           />
         )}

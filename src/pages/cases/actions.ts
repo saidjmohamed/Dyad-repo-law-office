@@ -24,14 +24,49 @@ export interface Case {
   user_id: string;
 }
 
-export const getCases = async (): Promise<Case[]> => {
-  const { data, error } = await supabase
+interface GetCasesFilters {
+  searchTerm?: string;
+  filterCaseType?: string;
+  filterCourt?: string;
+  filterStatus?: string;
+  filterFilingDateFrom?: string;
+  filterFilingDateTo?: string;
+  filterClientId?: string;
+}
+
+export const getCases = async (filters?: GetCasesFilters): Promise<Case[]> => {
+  let query = supabase
     .from("cases")
     .select(`
       *,
       clients (full_name)
-    `)
-    .order("created_at", { ascending: false });
+    `);
+
+  if (filters?.searchTerm) {
+    query = query.ilike('case_number', `%${filters.searchTerm}%`); // Example, adjust as needed for full-text search
+  }
+  if (filters?.filterCaseType) {
+    query = query.eq('case_type', filters.filterCaseType);
+  }
+  if (filters?.filterCourt) {
+    query = query.eq('court', filters.filterCourt);
+  }
+  if (filters?.filterStatus) {
+    query = query.eq('status', filters.filterStatus);
+  }
+  if (filters?.filterFilingDateFrom) {
+    query = query.gte('filing_date', filters.filterFilingDateFrom);
+  }
+  if (filters?.filterFilingDateTo) {
+    query = query.lte('filing_date', filters.filterFilingDateTo);
+  }
+  if (filters?.filterClientId) {
+    query = query.eq('client_id', filters.filterClientId);
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching cases:", error);
@@ -82,7 +117,7 @@ export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "upd
   return data;
 };
 
-export const updateCase = async (id: string, caseData: Partial<Omit<Case, "id" | "created_at" | "updated_at" | "user_id" | "client_name">>): Promise<Case> => {
+export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "created_at" | "updated_at" | "user_id" | "client_name">> & { id: string }): Promise<Case> => {
   const { data, error } = await supabase
     .from("cases")
     .update({ ...caseData, updated_at: new Date().toISOString() })

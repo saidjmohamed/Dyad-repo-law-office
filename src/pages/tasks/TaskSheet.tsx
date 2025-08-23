@@ -8,7 +8,7 @@ import {
 import { TaskForm } from "./TaskForm";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTask, updateTask, TaskFormData } from "./actions";
-import { getCases } from "../cases/actions";
+import { getCases, Case as CaseType } from "../cases/actions"; // استيراد Case من actions
 import { showSuccess, showError } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,7 +22,7 @@ type Task = {
 };
 
 // Define a type for cases data expected by TaskForm
-type CaseForTaskForm = { id: string; case_number: string; client_name: string };
+type CaseForTaskForm = CaseType; // استخدام النوع الموحد Case
 
 interface TaskSheetProps {
   open: boolean;
@@ -37,7 +37,7 @@ export const TaskSheet = ({ open, onOpenChange, task, caseIdForNewTask }: TaskSh
 
   const { data: cases, isLoading: isLoadingCases } = useQuery<CaseForTaskForm[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases(),
+    queryFn: () => getCases({}), // تمرير كائن مرشحات فارغ
   });
 
   const createMutation = useMutation({
@@ -112,7 +112,7 @@ export const TaskSheet = ({ open, onOpenChange, task, caseIdForNewTask }: TaskSh
             <TaskForm
               onSubmit={handleSubmit}
               isPending={createMutation.isPending || updateMutation.isPending}
-              cases={cases.map(c => ({ id: c.id, case_number: c.case_number, client_name: c.client_name }))}
+              cases={cases.map((c: CaseForTaskForm) => ({ id: c.id, case_number: c.case_number, client_name: c.client_name || 'غير معروف' }))}
               defaultValues={defaultValues}
             />
           ) : (

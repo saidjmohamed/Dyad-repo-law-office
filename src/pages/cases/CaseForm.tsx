@@ -46,7 +46,7 @@ const formSchema = z.object({
   status: z.string().min(1, "الحالة مطلوبة"),
   client_id: z.string().optional().nullable(),
   fees_estimated: z.preprocess(
-    (val) => (val === "" ? null : Number(val)),
+    (val) => (val === "" || val === undefined ? null : Number(val)),
     z.number().optional().nullable().refine((val) => val === null || val >= 0, {
       message: "الرسوم المقدرة يجب أن تكون رقمًا موجبًا",
     })
@@ -54,12 +54,13 @@ const formSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-type CaseFormValues = z.infer<typeof formSchema>;
+export type CaseFormValues = z.infer<typeof formSchema>; // تصدير النوع لاستخدامه في CaseSheet
 
 interface CaseFormProps {
   initialData?: Case;
   onSubmit: (data: CaseFormValues) => void;
-  isLoading: boolean;
+  isLoading: boolean; // تم تغيير isPending إلى isLoading
+  clients: { id: string; full_name: string }[]; // إضافة prop clients
 }
 
 const caseTypeOptions = [
@@ -104,31 +105,27 @@ const statusOptions = [
   { value: "مغلقة", label: "مغلقة" },
 ];
 
-export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) => {
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
-    queryKey: ["clients"],
-    queryFn: getClients,
-  });
-
+export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseFormProps) => {
+  // تم إزالة useQuery هنا لأن clients يتم تمريرها كـ prop
   const form = useForm<CaseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       case_type: initialData?.case_type || "",
-      court: initialData?.court || "",
-      division: initialData?.division || "",
-      criminal_subtype: initialData?.criminal_subtype || "",
+      court: initialData?.court || null,
+      division: initialData?.division || null,
+      criminal_subtype: initialData?.criminal_subtype || null,
       case_number: initialData?.case_number || "",
       filing_date: initialData?.filing_date ? new Date(initialData.filing_date) : undefined,
-      role_in_favor: initialData?.role_in_favor || "",
-      role_against: initialData?.role_against || "",
+      role_in_favor: initialData?.role_in_favor || null,
+      role_against: initialData?.role_against || null,
       last_adjournment_date: initialData?.last_adjournment_date ? new Date(initialData.last_adjournment_date) : undefined,
-      last_adjournment_reason: initialData?.last_adjournment_reason || "",
+      last_adjournment_reason: initialData?.last_adjournment_reason || null,
       next_hearing_date: initialData?.next_hearing_date ? new Date(initialData.next_hearing_date) : undefined,
-      judgment_summary: initialData?.judgment_summary || "",
+      judgment_summary: initialData?.judgment_summary || null,
       status: initialData?.status || "جديدة",
-      client_id: initialData?.client_id || "",
-      fees_estimated: initialData?.fees_estimated || 0,
-      notes: initialData?.notes || "",
+      client_id: initialData?.client_id || null,
+      fees_estimated: initialData?.fees_estimated ?? null,
+      notes: initialData?.notes || null,
     },
   });
 
@@ -267,7 +264,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
               <FormItem>
                 <FormLabel>رقم القضية</FormLabel>
                 <FormControl>
-                  <Input placeholder="أدخل رقم القضية" {...field} />
+                  <Input placeholder="أدخل رقم القضية" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -287,9 +284,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {isLoadingClients ? (
-                      <SelectItem value="" disabled>جاري التحميل...</SelectItem>
-                    ) : (
+                    {/* isLoadingClients تم إزالته هنا لأن clients يتم تمريرها كـ prop */}
                       <>
                         <SelectItem value="">لا يوجد موكل</SelectItem>
                         {clients?.map((client) => (
@@ -298,7 +293,6 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
                           </SelectItem>
                         ))}
                       </>
-                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -367,7 +361,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
               <FormItem>
                 <FormLabel>الطرف المدعي/المشتكي</FormLabel>
                 <FormControl>
-                  <Input placeholder="أدخل اسم الطرف المدعي/المشتكي" {...field} />
+                  <Input placeholder="أدخل اسم الطرف المدعي/المشتكي" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -381,7 +375,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
               <FormItem>
                 <FormLabel>الطرف المدعى عليه/المشتكى منه</FormLabel>
                 <FormControl>
-                  <Input placeholder="أدخل اسم الطرف المدعى عليه/المشتكى منه" {...field} />
+                  <Input placeholder="أدخل اسم الطرف المدعى عليه/المشتكى منه" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -460,7 +454,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
               <FormItem>
                 <FormLabel>سبب آخر تأجيل</FormLabel>
                 <FormControl>
-                  <Input placeholder="أدخل سبب آخر تأجيل" {...field} />
+                  <Input placeholder="أدخل سبب آخر تأجيل" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -515,7 +509,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
             <FormItem>
               <FormLabel>ملخص الحكم</FormLabel>
               <FormControl>
-                <Textarea placeholder="أدخل ملخص الحكم" {...field} />
+                <Textarea placeholder="أدخل ملخص الحكم" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -529,7 +523,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading }: CaseFormProps) =>
             <FormItem>
               <FormLabel>ملاحظات</FormLabel>
               <FormControl>
-                <Textarea placeholder="أدخل أي ملاحظات إضافية" {...field} />
+                <Textarea placeholder="أدخل أي ملاحظات إضافية" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>

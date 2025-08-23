@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getCaseById } from "./actions";
+import { getCase, Case as CaseType } from "./actions"; // تغيير getCaseById إلى getCase واستيراد Case
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,9 @@ import { CaseHearings } from "./CaseHearings";
 import { CaseTasks } from "./CaseTasks";
 import { CaseDocuments } from "./CaseDocuments";
 import { CaseFinancials } from "./CaseFinancials";
-import { CaseAdjournments } from "./CaseAdjournments"; // استيراد المكون الجديد
+import { CaseAdjournments } from "./CaseAdjournments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign, ChevronsRight } from "lucide-react"; // استيراد أيقونة جديدة
+import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign, ChevronsRight } from "lucide-react";
 
 // Define types for the fetched data
 type Client = {
@@ -64,24 +64,13 @@ type Adjournment = {
   reason?: string | null;
 };
 
-type CaseDetailsData = {
-  id: string;
-  case_type: string;
-  court: string;
-  division?: string | null;
-  case_number: string;
-  filing_date?: string | null;
-  role_in_favor?: string | null;
-  role_against?: string | null;
-  fees_estimated?: number | null;
-  notes?: string | null;
-  status?: string | null;
-  clients: Client;
+type CaseDetailsData = CaseType & { // استخدام CaseType الموحد وتوسيعها
+  clients: Client; // يجب أن يكون هذا موجودًا من الاستعلام
   hearings: Hearing[];
   tasks: Task[];
   case_files: CaseFile[];
   financial_transactions: FinancialTransaction[];
-  adjournments: Adjournment[]; // إضافة التأجيلات إلى النوع
+  adjournments: Adjournment[];
 };
 
 const CaseDetails = () => {
@@ -89,7 +78,7 @@ const CaseDetails = () => {
 
   const { data: caseDetails, isLoading, isError } = useQuery<CaseDetailsData>({
     queryKey: ["case", caseId],
-    queryFn: () => getCaseById(caseId!),
+    queryFn: () => getCase(caseId!) as Promise<CaseDetailsData>, // تغيير getCaseById إلى getCase
     enabled: !!caseId,
   });
 
@@ -141,7 +130,7 @@ const CaseDetails = () => {
               <CardContent className="space-y-2">
                 <p><strong>الموكل:</strong> {caseDetails.clients?.full_name || "غير محدد"}</p>
                 <p><strong>نوع القضية:</strong> {caseDetails.case_type}</p>
-                <p><strong>جهة التقاضي:</strong> {caseDetails.court}</p>
+                <p><strong>جهة التقاضي:</strong> {caseDetails.court || "-"}</p>
                 <p><strong>القسم/الغرفة:</strong> {caseDetails.division || "-"}</p>
                 <p><strong>تاريخ القيد:</strong> {caseDetails.filing_date ? format(new Date(caseDetails.filing_date), "PPP") : "-"}</p>
               </CardContent>
