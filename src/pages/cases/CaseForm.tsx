@@ -331,7 +331,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
               name="supreme_court_chamber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>غرفة المحكمة العليا (إن وُجد طعن بالنقض)</FormLabel>
+                  <FormLabel>غرفة المحكمة العليا (إن وُجد طعن بالنقض)</Formabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
@@ -766,7 +766,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
           <FormField
             control={form.control}
             name="access_control"
-            render={({ field: innerField }) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>تعيين من يمكنه الوصول لهذا الملف</FormLabel>
                 <div className="grid grid-cols-2 gap-2">
