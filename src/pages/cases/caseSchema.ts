@@ -2,15 +2,18 @@ import { z } from "zod";
 
 // Schema for individual party
 export const partySchema = z.object({
+  id: z.string().uuid().optional(), // Added for existing parties during update
   name: z.string().min(1, "الاسم واللقب مطلوب"),
   role: z.string().optional().nullable(), // For 'other_parties'
-  party_type: z.string().min(1, "نوع الطرف مطلوب"), // 'plaintiff', 'defendant', 'other'
+  party_type: z.enum(['plaintiff', 'defendant', 'other'], { required_error: "نوع الطرف مطلوب" }), // Enforce specific types
   role_detail: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   id_number: z.string().optional().nullable(),
   contact: z.string().optional().nullable(),
   representative: z.string().optional().nullable(),
 });
+
+export type PartyFormValues = z.infer<typeof partySchema>; // Exported for use in actions.ts
 
 export const caseFormSchema = z.object({
   case_category: z.string().min(1, "نوع القضية مطلوب"),
@@ -68,7 +71,8 @@ export const caseFormSchema = z.object({
   last_modified_at: z.date().optional().nullable(),
   access_control: z.array(z.string()).optional().nullable(),
 
-  // Attachments are handled separately, not directly in this form schema
+  // Client ID for linking
+  client_id: z.string().uuid().optional().nullable(), // Added client_id to schema
 });
 
 export type CaseFormValues = z.infer<typeof caseFormSchema>;

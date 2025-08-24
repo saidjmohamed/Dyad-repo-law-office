@@ -1,8 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import { CaseFormValues, PartyFormValues } from "./caseSchema"; // Import PartyFormValues
 
 export interface Case {
   id: string;
-  case_category: string; // Renamed from case_type
+  case_category: string;
   procedure_type: string;
   case_number?: string | null;
   registered_at?: string | null;
@@ -48,6 +49,7 @@ export interface Case {
   access_control?: string[] | null;
 
   user_id: string; // Owner of the case
+  status?: string | null; // Added status property
 
   // Relations (for fetching, not direct storage in 'cases' table)
   client_id?: string | null; // Still linking to clients table
@@ -90,11 +92,11 @@ export interface CaseAttachment {
 
 interface GetCasesFilters {
   searchTerm?: string;
-  filterCaseCategory?: string; // Renamed
-  filterCourtName?: string; // Renamed
+  filterCaseCategory?: string;
+  filterCourtName?: string;
   filterStatus?: string;
-  filterRegisteredAtFrom?: string; // Renamed
-  filterRegisteredAtTo?: string; // Renamed
+  filterRegisteredAtFrom?: string;
+  filterRegisteredAtTo?: string;
   filterClientId?: string;
 }
 
@@ -171,7 +173,7 @@ export const getCase = async (id: string): Promise<Case> => {
 };
 
 // Helper to insert/update parties
-const manageCaseParties = async (caseId: string, userId: string, parties: CaseParty[]) => {
+const manageCaseParties = async (caseId: string, userId: string, parties: PartyFormValues[]) => {
   const existingParties = await supabase.from('case_parties').select('id').eq('case_id', caseId);
   const existingPartyIds = existingParties.data?.map(p => p.id) || [];
   const incomingPartyIds = parties.filter(p => p.id).map(p => p.id);
@@ -185,24 +187,29 @@ const manageCaseParties = async (caseId: string, userId: string, parties: CasePa
 
   // Insert new parties and update existing ones
   for (const party of parties) {
+    const partyToSave = {
+      ...party,
+      case_id: caseId,
+      user_id: userId,
+      // Ensure 'id' is only included for updates, not inserts
+      ...(party.id && { id: party.id }),
+    };
+
     if (party.id && existingPartyIds.includes(party.id)) {
       // Update existing
-      const { error } = await supabase.from('case_parties').update({ ...party, user_id: userId }).eq('id', party.id);
+      const { error } = await supabase.from('case_parties').update(partyToSave).eq('id', party.id);
       if (error) throw error;
     } else {
-      // Insert new
-      const { error } = await supabase.from('case_parties').insert({ ...party, case_id: caseId, user_id: userId });
+      // Insert new (remove id if it's a temporary one from the form)
+      const { id, ...insertPartyData } = partyToSave; // Destructure to remove id for insert
+      const { error } = await supabase.from('case_parties').insert(insertPartyData);
       if (error) throw error;
     }
   }
 };
 
 
-export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "user_id" | "client_name" | "case_parties" | "case_attachments" | "hearings" | "tasks" | "financial_transactions" | "adjournments"> & {
-  plaintiffs: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
-  defendants: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
-  other_parties?: Omit<CaseParty, "id" | "case_id" | "user_id" | "created_at">[];
-}): Promise<Case> => {
+export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول.");
 
@@ -225,17 +232,12 @@ export const createCase = async (caseData: Omit<Case, "id" | "created_at" | "upd
     ...defendants.map(p => ({ ...p, party_type: 'defendant' as const })),
     ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
   ];
-  await manageCaseParties(data.id, user.id, allParties as CaseParty[]);
+  await manageCaseParties(data.id, user.id, allParties);
 
   return data;
 };
 
-export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "created_at" | "user_id" | "client_name" | "case_parties" | "case_attachments" | "hearings" | "tasks" | "financial_transactions" | "adjournments">> & {
-  id: string;
-  plaintiffs?: CaseParty[];
-  defendants?: CaseParty[];
-  other_parties?: CaseParty[];
-}): Promise<Case> => {
+export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormValues): Promise<Case> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("المستخدم غير مسجل الدخول.");
 
@@ -254,14 +256,12 @@ export const updateCase = async ({ id, ...caseData }: Partial<Omit<Case, "create
   }
 
   // Update parties if provided
-  if (plaintiffs || defendants || other_parties) {
-    const allParties = [
-      ...(plaintiffs || []).map(p => ({ ...p, party_type: 'plaintiff' as const })),
-      ...(defendants || []).map(p => ({ ...p, party_type: 'defendant' as const })),
-      ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
-    ];
-    await manageCaseParties(id, user.id, allParties as CaseParty[]);
-  }
+  const allParties = [
+    ...(plaintiffs || []).map(p => ({ ...p, party_type: 'plaintiff' as const })),
+    ...(defendants || []).map(p => ({ ...p, party_type: 'defendant' as const })),
+    ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
+  ];
+  await manageCaseParties(id, user.id, allParties);
 
   return data;
 };

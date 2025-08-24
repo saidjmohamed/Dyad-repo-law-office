@@ -7,15 +7,15 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { CaseForm } from "./CaseForm";
-import { createCase, updateCase, Case } from "./actions"; // استخدام Case من actions
+import { createCase, updateCase, Case } from "./actions";
 import { getClients } from "../clients/actions";
 import { showSuccess, showError } from "@/utils/toast";
-import { CaseFormValues } from "./caseSchema"; // استيراد CaseFormValues من caseSchema
+import { CaseFormValues } from "./caseSchema";
 
 interface CaseSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseData?: Case | null; // استخدام نوع Case الموحد
+  caseData?: Case | null;
 }
 
 export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
@@ -42,7 +42,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     mutationFn: updateCase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
-      queryClient.invalidateQueries({ queryKey: ["case", caseData?.id] }); // Invalidate specific case details
+      queryClient.invalidateQueries({ queryKey: ["case", caseData?.id] });
       showSuccess("تم تحديث القضية بنجاح.");
       onOpenChange(false);
     },
@@ -51,8 +51,8 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     },
   });
 
-  const onSubmit = (data: CaseFormValues) => { // استخدام CaseFormValues
-    // تحويل حقول التاريخ من Date إلى string (ISO) قبل الإرسال
+  const onSubmit = (data: CaseFormValues) => {
+    // Transform Date objects to ISO strings for Supabase
     const formattedData = {
       ...data,
       registered_at: data.registered_at ? data.registered_at.toISOString() : null,
@@ -85,8 +85,8 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
         ) : (
           <CaseForm
             onSubmit={onSubmit}
-            isLoading={createMutation.isPending || updateMutation.isPending} // استخدام isLoading
-            initialData={caseData || undefined} // تمرير initialData بدلاً من defaultValues
+            isLoading={createMutation.isPending || updateMutation.isPending}
+            initialData={caseData || undefined}
             clients={clients || []}
           />
         )}

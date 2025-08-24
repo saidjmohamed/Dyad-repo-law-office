@@ -1,11 +1,10 @@
-import React from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, PlusCircle } from 'lucide-react';
-import { CaseFormValues, partySchema } from './caseSchema';
+import { CaseFormValues } from './caseSchema';
 import { partyRoleOptions } from '@/data/caseOptions';
 
 interface CasePartyFieldsProps {
@@ -16,7 +15,7 @@ interface CasePartyFieldsProps {
 }
 
 export const CasePartyFields = ({ name, label, partyType, showRoleSelect = false }: CasePartyFieldsProps) => {
-  const { control, register, formState: { errors } } = useFormContext<CaseFormValues>();
+  const { control, formState: { errors } } = useFormContext<CaseFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: name,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCases, deleteCase, Case } from "./actions"; // استيراد Case من actions
+import { getCases, deleteCase, Case } from "./actions";
 import { getClients } from "../clients/actions";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Pencil, Trash2, Eye } from "lucide-react";
@@ -30,9 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { caseCategoryOptions, procedureTypeOptions, jurisdictionSectionOptions, feesStatusOptions } from "@/data/caseOptions"; // استيراد الخيارات الجديدة
+import { caseCategoryOptions, procedureTypeOptions, feesStatusOptions } from "@/data/caseOptions"; // Removed jurisdictionSectionOptions
 
-type CaseData = Case; // استخدام النوع الموحد Case
+type CaseData = Case;
 
 const Cases = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -41,12 +41,12 @@ const Cases = () => {
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCaseCategory, setFilterCaseCategory] = useState(""); // Renamed
-  const [filterProcedureType, setFilterProcedureType] = useState(""); // New filter
-  const [filterCourtName, setFilterCourtName] = useState(""); // Renamed
+  const [filterCaseCategory, setFilterCaseCategory] = useState("");
+  const [filterProcedureType, setFilterProcedureType] = useState("");
+  const [filterCourtName, setFilterCourtName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterRegisteredAtFrom, setFilterRegisteredAtFrom] = useState<Date | undefined>(undefined); // Renamed
-  const [filterRegisteredAtTo, setFilterRegisteredAtTo] = useState<Date | undefined>(undefined); // Renamed
+  const [filterRegisteredAtFrom, setFilterRegisteredAtFrom] = useState<Date | undefined>(undefined);
+  const [filterRegisteredAtTo, setFilterRegisteredAtTo] = useState<Date | undefined>(undefined);
   const [filterClientId, setFilterClientId] = useState("");
 
   const queryClient = useQueryClient();

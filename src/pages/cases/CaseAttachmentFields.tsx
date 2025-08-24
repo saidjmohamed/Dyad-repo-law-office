@@ -1,11 +1,10 @@
-import React from 'react';
-import { useFieldArray, useFormContext } from 'react-hook-form';
+import { useFieldArray, useFormContext, FieldErrorsImpl } from 'react-hook-form'; // Added FieldErrorsImpl
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Trash2, PlusCircle } from 'lucide-react';
-import { AttachmentFormValues } from './caseSchema'; // Assuming AttachmentFormValues is defined in caseSchema.ts
+// Removed AttachmentFormValues as it's not directly used here
 
 interface CaseAttachmentFieldsProps {
   name: string; // This will be 'attachments'
@@ -13,15 +12,15 @@ interface CaseAttachmentFieldsProps {
 }
 
 export const CaseAttachmentFields = ({ name, label }: CaseAttachmentFieldsProps) => {
-  const { control, formState: { errors } } = useFormContext<any>(); // Use any for now, will refine with actual form type
+  const { control, formState: { errors } } = useFormContext<any>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: name,
   });
 
   const getAttachmentErrors = (index: number) => {
-    if (errors[name] && errors[name]?.[index]) {
-      return errors[name]?.[index] as any;
+    if (errors[name] && (errors[name] as FieldErrorsImpl<any>)?.[index]) { // Explicitly cast to FieldErrorsImpl
+      return (errors[name] as FieldErrorsImpl<any>)?.[index] as any; // Explicitly cast to FieldErrorsImpl
     }
     return undefined;
   };

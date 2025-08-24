@@ -13,9 +13,9 @@ import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog"
 type CaseFile = {
   id: string;
   file_name: string;
-  file_path: string;
+  storage_path: string; // Changed from file_path to storage_path
   uploaded_at: string;
-  size: number;
+  size?: number | null; // Made optional to match CaseAttachment
 };
 
 interface CaseDocumentsProps {
@@ -85,7 +85,7 @@ export const CaseDocuments = ({ caseId, files }: CaseDocumentsProps) => {
 
   const confirmDelete = () => {
     if (fileToDelete) {
-      deleteMutation.mutate({ id: fileToDelete.id, file_path: fileToDelete.file_path });
+      deleteMutation.mutate({ id: fileToDelete.id, file_path: fileToDelete.storage_path }); // Changed to storage_path
     }
   };
 
@@ -136,11 +136,11 @@ export const CaseDocuments = ({ caseId, files }: CaseDocumentsProps) => {
                     <File className="w-5 h-5 ml-3 text-muted-foreground" />
                     <div>
                       <p className="font-medium">{file.file_name}</p>
-                      <p className="text-sm text-muted-foreground">{formatBytes(file.size)}</p>
+                      <p className="text-sm text-muted-foreground">{formatBytes(file.size || 0)}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1 space-x-reverse">
-                    <Button variant="ghost" size="icon" onClick={() => downloadCaseFile(file.file_path, file.file_name)}>
+                    <Button variant="ghost" size="icon" onClick={() => downloadCaseFile(file.storage_path, file.file_name)}>
                       <Download className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(file)}>

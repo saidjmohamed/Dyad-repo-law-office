@@ -2,7 +2,6 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
   FormControl,
   FormField,
   FormItem,
@@ -26,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { Case } from "./actions";
 import { useEffect } from "react";
 import { ar } from 'date-fns/locale';
-import { caseFormSchema, CaseFormValues, partySchema } from "./caseSchema"; // استيراد المخطط والنوع
+import { caseFormSchema, CaseFormValues } from "./caseSchema";
 import {
   caseCategoryOptions,
   procedureTypeOptions,
@@ -35,9 +34,9 @@ import {
   criminalOffenseTypeOptions,
   feesStatusOptions,
   accessControlOptions,
-} from "@/data/caseOptions"; // استيراد الخيارات الجديدة
+} from "@/data/caseOptions";
 import { CasePartyFields } from "./CasePartyFields";
-import { CaseAttachmentFields } from "./CaseAttachmentFields";
+// Removed CaseAttachmentFields import
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface CaseFormProps {
@@ -61,9 +60,9 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       appeal_to_court: initialData?.appeal_to_court || null,
       supreme_court_chamber: initialData?.supreme_court_chamber || null,
 
-      plaintiffs: initialData?.case_parties?.filter(p => p.party_type === 'plaintiff') || [{ name: '', party_type: 'plaintiff', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
-      defendants: initialData?.case_parties?.filter(p => p.party_type === 'defendant') || [{ name: '', party_type: 'defendant', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
-      other_parties: initialData?.case_parties?.filter(p => p.party_type === 'other') || [],
+      plaintiffs: initialData?.case_parties?.filter(p => p.party_type === 'plaintiff').map(p => ({ ...p, id: p.id })) || [{ name: '', party_type: 'plaintiff', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
+      defendants: initialData?.case_parties?.filter(p => p.party_type === 'defendant').map(p => ({ ...p, id: p.id })) || [{ name: '', party_type: 'defendant', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
+      other_parties: initialData?.case_parties?.filter(p => p.party_type === 'other').map(p => ({ ...p, id: p.id })) || [],
 
       criminal_offense_type: initialData?.criminal_offense_type || null,
       complaint_filed_with: initialData?.complaint_filed_with || null,
@@ -93,6 +92,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       last_modified_by: initialData?.last_modified_by || null,
       last_modified_at: initialData?.last_modified_at ? new Date(initialData.last_modified_at) : undefined,
       access_control: initialData?.access_control || [],
+      client_id: initialData?.client_id || null, // Added client_id to defaultValues
     },
   });
 
@@ -236,7 +236,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
                   <FormLabel>الموكل</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                    value={field.value || "none"}
+                    value={field.value ?? "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -766,7 +766,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
           <FormField
             control={form.control}
             name="access_control"
-            render={({ field }) => (
+            render={({ field: innerField }) => (
               <FormItem>
                 <FormLabel>تعيين من يمكنه الوصول لهذا الملف</FormLabel>
                 <div className="grid grid-cols-2 gap-2">
@@ -775,7 +775,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
                       key={option.value}
                       control={form.control}
                       name="access_control"
-                      render={({ field: innerField }) => {
+                      render={({ field: checkboxField }) => {
                         return (
                           <FormItem
                             key={option.value}
@@ -783,12 +783,12 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
                           >
                             <FormControl>
                               <Checkbox
-                                checked={innerField.value?.includes(option.value)}
+                                checked={checkboxField.value?.includes(option.value)}
                                 onCheckedChange={(checked) => {
                                   return checked
-                                    ? innerField.onChange([...(innerField.value || []), option.value])
-                                    : innerField.onChange(
-                                        (innerField.value || []).filter(
+                                    ? checkboxField.onChange([...(checkboxField.value || []), option.value])
+                                    : checkboxField.onChange(
+                                        (checkboxField.value || []).filter(
                                           (value) => value !== option.value
                                         )
                                       );

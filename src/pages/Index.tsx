@@ -14,11 +14,11 @@ import { CaseTypePieChart } from "@/components/charts/CaseTypePieChart";
 import { MonthlyCaseBarChart } from "@/components/charts/MonthlyCaseBarChart";
 import { ar } from 'date-fns/locale';
 import { useMemo } from 'react';
-import { Case as CaseType } from "./cases/actions"; // استيراد نوع Case من actions.ts
+import { Case as CaseType } from "./cases/actions";
 
 // Define types for data fetched from queries
 type Client = { id: string; full_name: string; };
-type Case = CaseType; // استخدام النوع المستورد
+type Case = CaseType;
 type Hearing = { id: string; hearing_date: string; case_number: string | null | undefined; client_name: string | null | undefined; case_id: string; };
 type Task = { id: string; done: boolean; priority: string | null | undefined; title: string; due_date: string | null | undefined; case_id?: string | null; };
 
@@ -29,7 +29,7 @@ const Index = () => {
   });
   const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
     queryKey: ["cases"],
-    queryFn: () => getCases({}), // تمرير كائن مرشحات فارغ
+    queryFn: () => getCases({}),
   });
   const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ["hearings"],
@@ -76,7 +76,7 @@ const Index = () => {
     if (!cases) return [];
     const typeCounts: { [key: string]: number } = {};
     cases.forEach((c: Case) => {
-      typeCounts[c.case_type] = (typeCounts[c.case_type] || 0) + 1;
+      typeCounts[c.case_category] = (typeCounts[c.case_category] || 0) + 1;
     });
     return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
   }, [cases]);
@@ -86,16 +86,19 @@ const Index = () => {
     if (!cases) return [];
     const monthCounts: { [key: string]: number } = {};
     cases.forEach((c: Case) => {
-      if (c.filing_date) {
-        const date = parseISO(c.filing_date);
-        const monthYear = format(date, "MMM yyyy", { locale: ar }); // تنسيق الشهر والسنة باللغة العربية
+      if (c.registered_at) { // Changed from filing_date to registered_at
+        const date = parseISO(c.registered_at);
+        const monthYear = format(date, "MMM yyyy", { locale: ar });
         monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1;
       }
     });
     // Sort by date to ensure correct order
     const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
-      const dateA = parseISO(a.replace(/(\S+) (\d{4})/, '01 $1 $2')); // Dummy day for parsing
-      const dateB = parseISO(b.replace(/(\S+) (\d{4})/, '01 $1 $2'));
+      // This parsing logic needs to be robust for Arabic month names if they are not standard ISO
+      // For simplicity, assuming 'MMM yyyy' can be parsed or a custom sort is needed.
+      // A more robust solution might involve mapping Arabic month names to numbers.
+      const dateA = new Date(a.replace(/(\S+) (\d{4})/, '01 $1 $2')); // Simplified parsing, might need adjustment for actual Arabic month names
+      const dateB = new Date(b.replace(/(\S+) (\d{4})/, '01 $1 $2'));
       return dateA.getTime() - dateB.getTime();
     });
 

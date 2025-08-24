@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getCase, Case as CaseType, CaseParty, CaseAttachment } from "./actions"; // استيراد CaseParty و CaseAttachment
+import { getCase, Case as CaseType, CaseParty, CaseAttachment } from "./actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { CaseDocuments } from "./CaseDocuments";
 import { CaseFinancials } from "./CaseFinancials";
 import { CaseAdjournments } from "./CaseAdjournments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign, ChevronsRight, Users } from "lucide-react"; // إضافة Users icon
+import { Briefcase, CalendarClock, ListTodo, FileText, DollarSign, ChevronsRight, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Define types for the fetched data
@@ -57,8 +57,8 @@ type Adjournment = {
   reason?: string | null;
 };
 
-type CaseDetailsData = CaseType & { // استخدام CaseType الموحد وتوسيعها
-  clients: Client; // يجب أن يكون هذا موجودًا من الاستعلام
+type CaseDetailsData = CaseType & {
+  clients: Client;
   case_parties: CaseParty[];
   case_attachments: CaseAttachment[];
   hearings: Hearing[];
