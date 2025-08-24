@@ -1,3 +1,5 @@
+"use client";
+
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -331,7 +333,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
               name="supreme_court_chamber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>غرفة المحكمة العليا (إن وُجد طعن بالنقض)</Formabel>
+                  <FormLabel>غرفة المحكمة العليا (إن وُجد طعن بالنقض)</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>

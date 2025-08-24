@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
@@ -52,22 +54,11 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
   });
 
   const onSubmit = (data: CaseFormValues) => {
-    // Transform Date objects to ISO strings for Supabase
-    const formattedData = {
-      ...data,
-      registered_at: data.registered_at ? data.registered_at.toISOString() : null,
-      original_judgment_date: data.original_judgment_date ? data.original_judgment_date.toISOString() : null,
-      first_hearing_date: data.first_hearing_date ? data.first_hearing_date.toISOString() : null,
-      last_postponement_date: data.last_postponement_date ? data.last_postponement_date.toISOString() : null,
-      next_hearing_date: data.next_hearing_date ? data.next_hearing_date.toISOString() : null,
-      created_at: data.created_at ? data.created_at.toISOString() : null,
-      last_modified_at: data.last_modified_at ? data.last_modified_at.toISOString() : null,
-    };
-
+    // Pass Date objects directly. Supabase client will handle conversion.
     if (caseData) {
-      updateMutation.mutate({ id: caseData.id, ...formattedData });
+      updateMutation.mutate({ id: caseData.id, ...data });
     } else {
-      createMutation.mutate(formattedData);
+      createMutation.mutate(data);
     }
   };
 
