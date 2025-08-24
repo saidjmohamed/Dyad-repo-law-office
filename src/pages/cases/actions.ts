@@ -291,3 +291,14 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
 
   return data;
 };
+
+export const deleteCase = async (id: string) => {
+  const { error } = await supabase.from("cases").delete().eq("id", id);
+
+  if (error) {
+    console.error("Error deleting case:", error);
+    throw new Error("لا يمكن حذف القضية.");
+  }
+
+  return true;
+};
