@@ -18,7 +18,7 @@ export type PartyFormValues = z.infer<typeof partySchema>; // Exported for use i
 export const caseFormSchema = z.object({
   case_category: z.string().min(1, "نوع القضية مطلوب"),
   procedure_type: z.string().min(1, "نوع الإجراء مطلوب"),
-  case_number: z.string().max(50, "رقم القضية لا يمكن أن يتجاوز 50 حرفًا").optional().nullable(),
+  case_number: z.string().min(1, "رقم القضية مطلوب").max(50, "رقم القضية لا يمكن أن يتجاوز 50 حرفًا"), // Made required
   registered_at: z.date({ required_error: "تاريخ تسجيل القضية مطلوب" }),
   court_name: z.string().optional().nullable(),
   province: z.string().optional().nullable(),

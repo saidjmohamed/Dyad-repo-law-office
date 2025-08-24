@@ -49,9 +49,9 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
   const form = useForm<CaseFormValues>({
     resolver: zodResolver(caseFormSchema),
     defaultValues: {
-      case_category: initialData?.case_category || "",
-      procedure_type: initialData?.procedure_type || "",
-      case_number: initialData?.case_number || null,
+      case_category: initialData?.case_category || caseCategoryOptions[0].value, // Default to first option
+      procedure_type: initialData?.procedure_type || procedureTypeOptions[0].value, // Default to first option
+      case_number: initialData?.case_number || "", // Default to empty string, now required by schema
       registered_at: initialData?.registered_at ? new Date(initialData.registered_at) : new Date(),
       court_name: initialData?.court_name || null,
       province: initialData?.province || null,
