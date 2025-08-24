@@ -36,7 +36,6 @@ import {
   accessControlOptions,
 } from "@/data/caseOptions";
 import { CasePartyFields } from "./CasePartyFields";
-// Removed CaseAttachmentFields import
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface CaseFormProps {
@@ -60,8 +59,9 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       appeal_to_court: initialData?.appeal_to_court || null,
       supreme_court_chamber: initialData?.supreme_court_chamber || null,
 
-      plaintiffs: initialData?.case_parties?.filter(p => p.party_type === 'plaintiff').map(p => ({ ...p, id: p.id })) || [{ name: '', party_type: 'plaintiff', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
-      defendants: initialData?.case_parties?.filter(p => p.party_type === 'defendant').map(p => ({ ...p, id: p.id })) || [{ name: '', party_type: 'defendant', role: null, role_detail: null, address: null, id_number: null, contact: null, representative: null }],
+      // Initialize parties as empty arrays for new cases, or map existing data
+      plaintiffs: initialData?.case_parties?.filter(p => p.party_type === 'plaintiff').map(p => ({ ...p, id: p.id })) || [],
+      defendants: initialData?.case_parties?.filter(p => p.party_type === 'defendant').map(p => ({ ...p, id: p.id })) || [],
       other_parties: initialData?.case_parties?.filter(p => p.party_type === 'other').map(p => ({ ...p, id: p.id })) || [],
 
       criminal_offense_type: initialData?.criminal_offense_type || null,
@@ -92,7 +92,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       last_modified_by: initialData?.last_modified_by || null,
       last_modified_at: initialData?.last_modified_at ? new Date(initialData.last_modified_at) : undefined,
       access_control: initialData?.access_control || [],
-      client_id: initialData?.client_id || null, // Added client_id to defaultValues
+      client_id: initialData?.client_id || null,
     },
   });
 
@@ -117,9 +117,21 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
     }
   }, [showCriminalDetails, showAppealDetails, form]);
 
+  // Log form validation errors for debugging
+  useEffect(() => {
+    if (form.formState.errors && Object.keys(form.formState.errors).length > 0) {
+      console.log("Form validation errors:", form.formState.errors);
+    }
+  }, [form.formState.errors]);
+
+  const handleFormSubmit = (data: CaseFormValues) => {
+    console.log("Form data submitted:", data); // Log submitted data
+    onSubmit(data);
+  };
+
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         {/* معلومات عامة عن القضية */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold">معلومات عامة عن القضية</h2>
@@ -800,9 +812,6 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
             )}
           />
         </div>
-
-        {/* المرفقات - سيتم التعامل معها بشكل منفصل في CaseDetails */}
-        {/* <CaseAttachmentFields name="attachments" label="المرفقات" /> */}
 
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "جاري الحفظ..." : "حفظ القضية"}
