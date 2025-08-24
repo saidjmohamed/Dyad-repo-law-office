@@ -215,9 +215,23 @@ export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
 
   const { plaintiffs, defendants, other_parties, ...coreCaseData } = caseData;
 
+  // Convert Date objects to ISO strings for Supabase insertion
+  const dataToInsert = {
+    ...coreCaseData,
+    registered_at: coreCaseData.registered_at ? coreCaseData.registered_at.toISOString() : null,
+    original_judgment_date: coreCaseData.original_judgment_date ? coreCaseData.original_judgment_date.toISOString() : null,
+    first_hearing_date: coreCaseData.first_hearing_date ? coreCaseData.first_hearing_date.toISOString() : null,
+    last_postponement_date: coreCaseData.last_postponement_date ? coreCaseData.last_postponement_date.toISOString() : null,
+    next_hearing_date: coreCaseData.next_hearing_date ? coreCaseData.next_hearing_date.toISOString() : null,
+    created_at: new Date().toISOString(), // Always set created_at on creation
+    last_modified_at: null, // Not modified yet
+    user_id: user.id,
+    created_by: user.id,
+  };
+
   const { data, error } = await supabase
     .from("cases")
-    .insert({ ...coreCaseData, user_id: user.id, created_by: user.id, created_at: new Date().toISOString() })
+    .insert(dataToInsert)
     .select()
     .single();
 
@@ -243,9 +257,21 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
 
   const { plaintiffs, defendants, other_parties, ...coreCaseData } = caseData;
 
+  // Convert Date objects to ISO strings for Supabase update
+  const dataToUpdate = {
+    ...coreCaseData,
+    registered_at: coreCaseData.registered_at ? coreCaseData.registered_at.toISOString() : null,
+    original_judgment_date: coreCaseData.original_judgment_date ? coreCaseData.original_judgment_date.toISOString() : null,
+    first_hearing_date: coreCaseData.first_hearing_date ? coreCaseData.first_hearing_date.toISOString() : null,
+    last_postponement_date: coreCaseData.last_postponement_date ? coreCaseData.last_postponement_date.toISOString() : null,
+    next_hearing_date: coreCaseData.next_hearing_date ? coreCaseData.next_hearing_date.toISOString() : null,
+    last_modified_at: new Date().toISOString(), // Always set last_modified_at on update
+    last_modified_by: user.id,
+  };
+
   const { data, error } = await supabase
     .from("cases")
-    .update({ ...coreCaseData, last_modified_by: user.id, last_modified_at: new Date().toISOString() })
+    .update(dataToUpdate)
     .eq("id", id)
     .select()
     .single();
@@ -264,16 +290,4 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
   await manageCaseParties(id, user.id, allParties);
 
   return data;
-};
-
-export const deleteCase = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from("cases")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    console.error("Error deleting case:", error);
-    throw new Error("فشل حذف القضية.");
-  }
 };

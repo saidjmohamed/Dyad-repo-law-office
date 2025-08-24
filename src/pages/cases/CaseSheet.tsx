@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
@@ -54,7 +52,6 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
   });
 
   const onSubmit = (data: CaseFormValues) => {
-    // Pass Date objects directly. Supabase client will handle conversion.
     if (caseData) {
       updateMutation.mutate({ id: caseData.id, ...data });
     } else {

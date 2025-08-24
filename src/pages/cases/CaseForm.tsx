@@ -1,5 +1,3 @@
-"use client";
-
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -773,37 +771,28 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
                 <FormLabel>تعيين من يمكنه الوصول لهذا الملف</FormLabel>
                 <div className="grid grid-cols-2 gap-2">
                   {accessControlOptions.map((option) => (
-                    <FormField
+                    <FormItem
                       key={option.value}
-                      control={form.control}
-                      name="access_control"
-                      render={({ field: checkboxField }) => {
-                        return (
-                          <FormItem
-                            key={option.value}
-                            className="flex flex-row items-start space-x-3 space-x-reverse space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={checkboxField.value?.includes(option.value)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? checkboxField.onChange([...(checkboxField.value || []), option.value])
-                                    : checkboxField.onChange(
-                                        (checkboxField.value || []).filter(
-                                          (value) => value !== option.value
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {option.label}
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
+                      className="flex flex-row items-start space-x-3 space-x-reverse space-y-0"
+                    >
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value?.includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            return checked
+                              ? field.onChange([...(field.value || []), option.value])
+                              : field.onChange(
+                                  (field.value || []).filter(
+                                    (value) => value !== option.value
+                                  )
+                                );
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        {option.label}
+                      </FormLabel>
+                    </FormItem>
                   ))}
                 </div>
                 <FormMessage />
