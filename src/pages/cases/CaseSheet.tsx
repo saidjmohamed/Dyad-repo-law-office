@@ -30,6 +30,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     mutationFn: createCase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["hearings"] }); // <--- إضافة هذا السطر
       showSuccess("تمت إضافة القضية بنجاح.");
       onOpenChange(false);
     },
@@ -43,6 +44,7 @@ export const CaseSheet = ({ open, onOpenChange, caseData }: CaseSheetProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       queryClient.invalidateQueries({ queryKey: ["case", caseData?.id] });
+      queryClient.invalidateQueries({ queryKey: ["hearings"] }); // <--- إضافة هذا السطر
       showSuccess("تم تحديث القضية بنجاح.");
       onOpenChange(false);
     },
