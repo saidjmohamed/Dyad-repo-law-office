@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { getClients } from "./clients/actions";
-import { getCases } from "./cases/actions";
-import { getTasks } from "./tasks/actions";
-import { getHearings } from "./hearings/actions";
+import { getCases, Case as CaseType } from "./cases/actions"; // Import Case type from actions
+import { getTasks, Task as TaskType } from "./tasks/actions"; // Import Task type from actions
+import { getHearings, Hearing as HearingType } from "./hearings/actions"; // Import Hearing type from actions
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, FolderOpen, Users, CalendarCheck } from "lucide-react";
 import { Client } from "./clients/ClientList"; // Import Client type
-import { Case } from "./cases/CaseList"; // Import Case type
-import { Task } from "./tasks/TaskList"; // Import Task type
-import { Hearing } from "./hearings/HearingList"; // Import Hearing type
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -17,25 +14,25 @@ const Index = () => {
     queryFn: () => getClients({}), // Corrected queryFn call
   });
 
-  const { data: cases, isLoading: isLoadingCases } = useQuery<Case[]>({
+  const { data: cases, isLoading: isLoadingCases } = useQuery<CaseType[]>({ // Use CaseType
     queryKey: ["cases"],
-    queryFn: getCases,
+    queryFn: () => getCases({}), // Pass empty filters object
   });
 
-  const { data: tasks, isLoading: isLoadingTasks } = useQuery<Task[]>({
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery<TaskType[]>({ // Use TaskType
     queryKey: ["tasks"],
     queryFn: getTasks,
   });
 
-  const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
+  const { data: hearings, isLoading: isLoadingHearings } = useQuery<HearingType[]>({ // Use HearingType
     queryKey: ["hearings"],
     queryFn: () => getHearings({}),
   });
 
   const stats = {
-    totalClients: clients?.length ?? 0, // Added nullish coalescing
-    activeCases: cases?.filter((c: Case) => c.status !== "مكتملة").length ?? 0, // Added nullish coalescing
-    pendingTasks: tasks?.filter((t: Task) => !t.done).length ?? 0,
+    totalClients: clients?.length ?? 0,
+    activeCases: cases?.filter((c: CaseType) => c.status !== "مكتملة").length ?? 0, // Use CaseType
+    pendingTasks: tasks?.filter((t: TaskType) => !t.done).length ?? 0, // Use TaskType
     upcomingHearings: hearings?.length ?? 0,
   };
 

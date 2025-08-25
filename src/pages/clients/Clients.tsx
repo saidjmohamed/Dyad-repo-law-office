@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { PlusCircle, Search } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Added useMutation, useQueryClient
+import { PlusCircle, Search, Pencil, Trash2 } from "lucide-react"; // Added Pencil, Trash2
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,6 +35,8 @@ const Clients = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
+  const queryClient = useQueryClient(); // Initialized useQueryClient
+
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["clients", searchTerm],
     queryFn: ({ queryKey }) => getClients({ query: queryKey[1] as string }), // Corrected queryFn call
@@ -46,6 +48,18 @@ const Clients = () => {
     (client.phone && client.phone.includes(searchTerm)) ||
     (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      toast.success("تم حذف الموكل بنجاح.");
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error: Error) => { // Explicitly type error
+      toast.error(`فشل حذف الموكل: ${error.message}`);
+    },
+  });
 
   // ... rest of the component remains the same
   return (

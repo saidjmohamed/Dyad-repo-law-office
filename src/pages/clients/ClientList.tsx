@@ -39,7 +39,7 @@ export type Client = {
   created_at: string;
   updated_at: string | null;
   user_id: string;
-  date_of_birth: string | Date | null; // Changed to allow Date object for editing
+  date_of_birth: string | null; // Changed to string | null to match database
   father_name: string | null;
   profession: string | null;
 };
@@ -65,7 +65,7 @@ const ClientList = () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsDeleteDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => { // Explicitly type error
       toast.error(`فشل حذف الموكل: ${error.message}`);
     },
   });
@@ -140,7 +140,7 @@ const ClientList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients?.map((client) => (
+                {clients?.map((client: Client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.full_name}</TableCell>
                     <TableCell>{client.national_id || "غير متوفر"}</TableCell>

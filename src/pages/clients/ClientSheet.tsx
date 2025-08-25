@@ -29,6 +29,7 @@ import { createClient, updateClient } from "./actions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { Client } from "./ClientList"; // Import Client type
 
 // Define the form schema with new optional fields
 const formSchema = z.object({
@@ -38,7 +39,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "بريد إلكتروني غير صالح" }).or(z.literal("")).optional().nullable(),
   address: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  date_of_birth: z.date().optional().nullable(), // New field
+  date_of_birth: z.date().optional().nullable(), // New field, expects Date object for form
   father_name: z.string().optional().nullable(), // New field
   profession: z.string().optional().nullable(), // New field
 });
@@ -48,7 +49,7 @@ type ClientFormValues = z.infer<typeof formSchema>;
 interface ClientSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  client?: ClientFormValues & { id: string }; // Extend with id for edit mode
+  client?: Client & { id: string }; // Use imported Client type
 }
 
 const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
@@ -64,7 +65,7 @@ const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
       email: "",
       address: "",
       notes: "",
-      date_of_birth: undefined,
+      date_of_birth: undefined, // Use undefined for initial empty date
       father_name: "",
       profession: "",
     },
@@ -74,7 +75,7 @@ const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
     if (client) {
       form.reset({
         ...client,
-        date_of_birth: client.date_of_birth ? new Date(client.date_of_birth) : undefined,
+        date_of_birth: client.date_of_birth ? new Date(client.date_of_birth) : undefined, // Convert string to Date
       });
     } else {
       form.reset();
@@ -88,7 +89,7 @@ const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => { // Explicitly type error
       toast.error(`فشل إضافة الموكل: ${error.message}`);
     },
   });
@@ -100,7 +101,7 @@ const ClientSheet = ({ open, onOpenChange, client }: ClientSheetProps) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => { // Explicitly type error
       toast.error(`فشل تحديث بيانات الموكل: ${error.message}`);
     },
   });

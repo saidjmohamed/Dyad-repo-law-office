@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { PlusCircle, Search, Edit, Trash2, Archive, Unarchive } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Added useMutation, useQueryClient
+import { PlusCircle, Search, Edit, Trash2, Archive, ArchiveRestore } from "lucide-react"; // Replaced Unarchive with ArchiveRestore
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { getCases, deleteCase, updateCase } from "./actions";
+import { getCases, deleteCase, toggleCaseArchiveStatus, Case as CaseType } from "./actions"; // Import CaseType from actions
 import CaseSheet from "./CaseSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,17 +37,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type Case = {
+export type Case = { // This type should match the one in actions.ts
   id: string;
-  case_number: string;
-  status: string;
+  case_number: string | null; // Allow null/undefined as per actions.ts
+  status: string | null;
   client_id: string | null;
   created_at: string;
   updated_at: string | null;
   user_id: string;
   case_category: string;
   procedure_type: string;
-  registered_at: string;
+  registered_at: string | null; // Allow null as per actions.ts
   court_name: string | null;
   province: string | null;
   jurisdiction_section: string | null;
@@ -84,18 +84,20 @@ const Cases = () => {
   const [filterClientId, setFilterClientId] = useState<string>("all");
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
+  const queryClient = useQueryClient(); // Initialized useQueryClient
+
+  const { data: clients } = useQuery<Client[]>({ // Removed isLoadingClients as it's not used
     queryKey: ["clients"],
-    queryFn: () => getClients({}), // Corrected queryFn call
+    queryFn: () => getClients({}),
   });
 
-  const { data: cases, isLoading } = useQuery<Case[]>({
+  const { data: cases, isLoading } = useQuery<CaseType[]>({ // Use CaseType
     queryKey: ["cases", searchTerm, filterStatus, filterClientId, showArchived],
     queryFn: () => getCases({
-      query: searchTerm,
-      status: filterStatus === "all" ? undefined : filterStatus,
-      clientId: filterClientId === "all" ? undefined : filterClientId,
-      archived: showArchived,
+      searchTerm: searchTerm, // Corrected property name
+      filterStatus: filterStatus === "all" ? undefined : filterStatus, // Corrected property name
+      filterClientId: filterClientId === "all" ? undefined : filterClientId, // Corrected property name
+      includeArchived: showArchived,
     }),
   });
 
@@ -106,22 +108,20 @@ const Cases = () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       setIsDeleteDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => { // Explicitly type error
       toast.error(`فشل حذف القضية: ${error.message}`);
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: updateCase,
+  const toggleArchiveMutation = useMutation({ // Renamed to avoid conflict with updateCase
+    mutationFn: toggleCaseArchiveStatus, // Use the specific toggle function
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
     },
-    onError: (error) => {
+    onError: (error: Error) => { // Explicitly type error
       toast.error(`فشل تحديث القضية: ${error.message}`);
     },
   });
-
-  const queryClient = useQueryClient();
 
   const handleAddCase = () => {
     setEditingCase(undefined);
@@ -145,7 +145,7 @@ const Cases = () => {
   };
 
   const handleArchiveToggle = (caseItem: Case) => {
-    updateMutation.mutate({ id: caseItem.id, archived: !caseItem.archived });
+    toggleArchiveMutation.mutate({ id: caseItem.id, archived: !caseItem.archived });
     toast.success(`تم ${caseItem.archived ? "إلغاء أرشفة" : "أرشفة"} القضية بنجاح.`);
   };
 
@@ -236,8 +236,8 @@ const Cases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cases?.length > 0 ? (
-                  cases.map((caseItem) => (
+                {cases && cases.length > 0 ? ( // Added null check
+                  cases.map((caseItem: CaseType) => ( // Explicitly type caseItem
                     <TableRow key={caseItem.id}>
                       <TableCell className="font-medium">
                         <Link to={`/cases/${caseItem.id}`} className="text-blue-500 hover:underline">
@@ -246,7 +246,7 @@ const Cases = () => {
                       </TableCell>
                       <TableCell>{getClientName(caseItem.client_id)}</TableCell>
                       <TableCell>{caseItem.status}</TableCell>
-                      <TableCell>{new Date(caseItem.registered_at).toLocaleDateString()}</TableCell>
+                      <TableCell>{caseItem.registered_at ? new Date(caseItem.registered_at).toLocaleDateString() : "-"}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
@@ -262,7 +262,7 @@ const Cases = () => {
                           onClick={() => handleArchiveToggle(caseItem)}
                           className="ml-2"
                         >
-                          {caseItem.archived ? <Unarchive className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                          {caseItem.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                         </Button>
                         <Button
                           variant="ghost"

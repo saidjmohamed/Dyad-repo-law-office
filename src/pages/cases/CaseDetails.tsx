@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getCase, Case as CaseType, CaseParty, CaseAttachment } from "./actions";
+import { getCase, Case as CaseType, CaseParty, CaseAttachment } from "./actions"; // Use CaseType from actions
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ type Adjournment = {
   reason?: string | null;
 };
 
-type CaseDetailsData = CaseType & {
+type CaseDetailsData = CaseType & { // Use CaseType here
   clients: Client;
   case_parties: CaseParty[];
   case_attachments: CaseAttachment[];
