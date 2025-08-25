@@ -1,8 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Added useMutation, useQueryClient
-import { PlusCircle, Search, Pencil, Trash2 } from "lucide-react"; // Added Pencil, Trash2
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getClients, deleteClient } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
+import { ClientSheet } from "./ClientSheet";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -11,139 +20,155 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { getClients, deleteClient } from "./actions";
-import ClientSheet from "./ClientSheet"; // Corrected import
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { Client } from "./ClientList"; // Import Client type
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { showSuccess, showError } from "@/utils/toast";
+
+type Client = {
+  id: string;
+  full_name: string;
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+};
 
 const Clients = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const queryClient = useQueryClient(); // Initialized useQueryClient
-
-  const { data: clients, isLoading } = useQuery<Client[]>({
-    queryKey: ["clients", searchTerm],
-    queryFn: ({ queryKey }) => getClients({ query: queryKey[1] as string }), // Corrected queryFn call
+  const queryClient = useQueryClient();
+  const { data: clients, isLoading, isError } = useQuery<Client[]>({
+    queryKey: ["clients"],
+    queryFn: getClients,
   });
 
-  const filteredClients = clients?.filter((client: Client) => // Added null check and explicit type
-    client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.national_id && client.national_id.includes(searchTerm)) ||
-    (client.phone && client.phone.includes(searchTerm)) ||
-    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    // Perform client-side filtering based on search term
+    return clients.filter(client =>
+      client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.phone && client.phone.includes(searchTerm)) ||
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.national_id && client.national_id.includes(searchTerm)) ||
+      (client.address && client.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.notes && client.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [clients, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
     onSuccess: () => {
-      toast.success("تم حذف الموكل بنجاح.");
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      showSuccess("تم حذف الموكل بنجاح.");
       setIsDeleteDialogOpen(false);
+      setDeletingClientId(null);
     },
-    onError: (error: Error) => { // Explicitly type error
-      toast.error(`فشل حذف الموكل: ${error.message}`);
+    onError: (error) => {
+      showError(error.message);
     },
   });
 
-  // ... rest of the component remains the same
+  const handleAddClick = () => {
+    setEditingClient(null);
+    setIsSheetOpen(true);
+  };
+
+  const handleEditClick = (client: Client) => {
+    setEditingClient(client);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingClientId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingClientId) {
+      deleteMutation.mutate(deletingClientId);
+    }
+  };
+
   return (
-    <div>
+    <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">الموكلون</h1>
+          <h1 className="text-3xl font-bold">إدارة الموكلين</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            إدارة قائمة الموكلين لديك.
+            عرض، إضافة، وتعديل بيانات الموكلين.
           </p>
         </div>
-        <Button onClick={() => { setEditingClient(undefined); setIsSheetOpen(true); }}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          إضافة موكل جديد
+        <Button onClick={handleAddClick}>
+          <PlusCircle className="w-4 h-4 ml-2" />
+          إضافة موكل
         </Button>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة الموكلين</CardTitle>
+          <CardDescription>
+            هنا قائمة بجميع الموكلين المسجلين في النظام.
+          </CardDescription>
+          <div className="relative mt-4">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="البحث عن موكل..."
+              placeholder="ابحث بالاسم، الهاتف، أو البريد الإلكتروني..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              className="w-full pl-4 pr-8"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-4">
+        </CardHeader>
+        <CardContent>
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
+            </div>
+          ) : isError ? (
+            <div className="text-red-500 text-center py-4">
+              حدث خطأ أثناء جلب البيانات.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>الاسم الكامل</TableHead>
-                  <TableHead>رقم التعريف الوطني</TableHead>
                   <TableHead>رقم الهاتف</TableHead>
                   <TableHead>البريد الإلكتروني</TableHead>
-                  <TableHead className="text-right">الإجراءات</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredClients && filteredClients.length > 0 ? (
-                  filteredClients.map((client: Client) => ( // Added null check and explicit type
+                  filteredClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.full_name}</TableCell>
-                      <TableCell>{client.national_id || "غير متوفر"}</TableCell>
-                      <TableCell>{client.phone || "غير متوفر"}</TableCell>
-                      <TableCell>{client.email || "غير متوفر"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingClient(client)}
-                          className="ml-2"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setClientToDelete(client.id);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <TableCell>{client.phone || "-"}</TableCell>
+                      <TableCell>{client.email || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(client)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(client.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      لا يوجد موكلون.
+                    <TableCell colSpan={4} className="text-center">
+                      {searchTerm ? "لم يتم العثور على نتائج." : "لا يوجد موكلون لعرضهم."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -158,29 +183,13 @@ const Clients = () => {
         onOpenChange={setIsSheetOpen}
         client={editingClient}
       />
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيؤدي هذا الإجراء إلى حذف الموكل بشكل دائم من سجلاتك.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (clientToDelete) {
-                deleteClient(clientToDelete);
-                toast.success("تم حذف الموكل بنجاح.");
-                queryClient.invalidateQueries({ queryKey: ["clients"] });
-              }
-              setIsDeleteDialogOpen(false);
-            }}>حذف</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
+      />
+    </>
   );
 };
 

@@ -6,8 +6,8 @@ export interface Case {
   id: string;
   case_category: string;
   procedure_type: string;
-  case_number: string | null; // Changed to allow null
-  registered_at: string | null; // Changed to allow null
+  case_number?: string | null;
+  registered_at?: string | null;
   court_name?: string | null;
   province?: string | null;
   jurisdiction_section?: string | null;
@@ -50,7 +50,7 @@ export interface Case {
   access_control?: string[] | null;
 
   user_id: string; // Owner of the case
-  status: string | null; // Added status property, allow null
+  status?: string | null; // Added status property
   archived: boolean; // Added archived property
 
   // Relations (for fetching, not direct storage in 'cases' table)
@@ -293,7 +293,7 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
   // Fetch the existing case to compare next_hearing_date
   const { data: oldCase, error: fetchError } = await supabase
     .from("cases")
-    .select('next_hearing_date, first_hearing_date') // Also fetch first_hearing_date for comparison
+    .select('next_hearing_date')
     .eq('id', id)
     .single();
 
@@ -362,7 +362,7 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
       room: undefined, // Changed from null to undefined
       judge: undefined, // Changed from null to undefined
       result: undefined, // Changed from null to undefined
-      notes: "تم تحديدها من تفاصيل القضية",
+      notes: "تم تحديثها من تفاصيل القضية",
     });
   }
 
