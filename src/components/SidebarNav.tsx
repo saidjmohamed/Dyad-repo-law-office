@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays, Settings, FileText } from "lucide-react"; // إزالة Database
+import { Briefcase, CalendarClock, LayoutDashboard, Users, ListTodo, CalendarDays, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -9,7 +9,6 @@ const navigation = [
   { name: "الجلسات", href: "/hearings", icon: CalendarClock },
   { name: "المهام", href: "/tasks", icon: ListTodo },
   { name: "التقويم", href: "/calendar", icon: CalendarDays },
-  { name: "قوالب الوثائق", href: "/document-templates", icon: FileText },
   { name: "الإعدادات", href: "/settings", icon: Settings },
 ];
 
