@@ -19,8 +19,15 @@ export type CaseWithClientName = {
   client_name: string;
 };
 
-export const getHearings = async () => {
-  const { data, error } = await supabase
+interface GetHearingsFilters {
+  searchTerm?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  type?: 'first' | 'adjournment' | 'all';
+}
+
+export const getHearings = async (filters: GetHearingsFilters = {}) => {
+  let query = supabase
     .from("hearings")
     .select(`
       *,
@@ -31,20 +38,49 @@ export const getHearings = async () => {
           full_name
         )
       )
-    `)
-    .order("hearing_date", { ascending: true });
+    `);
+
+  if (filters.dateFrom) {
+    query = query.gte('hearing_date', filters.dateFrom.toISOString());
+  }
+  if (filters.dateTo) {
+    query = query.lte('hearing_date', filters.dateTo.toISOString());
+  }
+
+  if (filters.type === 'first') {
+    query = query.eq('notes', 'الجلسة الأولى (آلي)');
+  } else if (filters.type === 'adjournment') {
+    // Exclude the automatically created first hearing, or include hearings with no notes
+    query = query.or('notes.not.eq.الجلسة الأولى (آلي),notes.is.null');
+  }
+
+  query = query.order("hearing_date", { ascending: true });
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching hearings:", error);
     throw new Error("لا يمكن جلب قائمة الجلسات.");
   }
 
-  return data.map((h: any) => ({
+  let mappedData = data.map((h: any) => ({
     ...h,
     case_number: h.case?.case_number,
     client_name: h.case?.client?.full_name,
   }));
+
+  // Client-side filtering for search term as it involves a joined table
+  if (filters.searchTerm) {
+    const lowercasedFilter = filters.searchTerm.toLowerCase();
+    mappedData = mappedData.filter(h =>
+      (h.case_number && h.case_number.toLowerCase().includes(lowercasedFilter)) ||
+      (h.client_name && h.client_name.toLowerCase().includes(lowercasedFilter))
+    );
+  }
+
+  return mappedData;
 };
+
 
 export const getCases = async (): Promise<CaseWithClientName[]> => {
   const { data, error } = await supabase

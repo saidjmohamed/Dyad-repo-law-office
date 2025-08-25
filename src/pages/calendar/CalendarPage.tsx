@@ -10,22 +10,35 @@ import { Skeleton } from '@/components/ui/skeleton';
 import arLocale from '@fullcalendar/core/locales/ar';
 import { Card, CardContent } from '@/components/ui/card';
 
+type Hearing = {
+  case_number?: string;
+  hearing_date: string;
+  case_id?: string;
+};
+
+type Task = {
+  title: string;
+  due_date: string | null;
+  case_id?: string | null;
+  done: boolean;
+};
+
 const CalendarPage = () => {
   const navigate = useNavigate();
 
-  const { data: hearings, isLoading: isLoadingHearings } = useQuery({
+  const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ['hearings'],
-    queryFn: getHearings,
+    queryFn: () => getHearings({}),
   });
 
-  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: getTasks,
   });
 
   const events = useMemo(() => {
     const hearingEvents =
-      hearings?.map((hearing) => ({
+      hearings?.map((hearing: Hearing) => ({
         title: `جلسة: ${hearing.case_number || 'غير محدد'}`,
         start: hearing.hearing_date,
         url: `/cases/${hearing.case_id}`,
@@ -41,7 +54,7 @@ const CalendarPage = () => {
         ?.filter(task => task.due_date && !task.done)
         .map((task) => ({
           title: `مهمة: ${task.title}`,
-          start: task.due_date,
+          start: task.due_date!,
           url: task.case_id ? `/cases/${task.case_id}` : undefined,
           backgroundColor: '#f59e0b',
           borderColor: '#f59e0b',

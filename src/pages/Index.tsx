@@ -33,7 +33,7 @@ const Index = () => {
   });
   const { data: hearings, isLoading: isLoadingHearings } = useQuery<Hearing[]>({
     queryKey: ["hearings"],
-    queryFn: getHearings,
+    queryFn: () => getHearings({}),
   });
   const { data: tasks, isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: ["tasks"],
@@ -45,13 +45,13 @@ const Index = () => {
   const stats = {
     totalClients: clients?.length ?? 0,
     activeCases: cases?.filter((c: Case) => c.status !== "مكتملة").length ?? 0,
-    upcomingHearings: hearings?.filter(h => new Date(h.hearing_date) >= new Date()).length ?? 0,
+    upcomingHearings: hearings?.filter((h: Hearing) => new Date(h.hearing_date) >= new Date()).length ?? 0,
     pendingTasks: tasks?.filter(t => !t.done).length ?? 0,
   };
 
   const upcomingHearingsList = hearings
-    ?.filter(h => new Date(h.hearing_date) >= new Date())
-    .sort((a, b) => new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime())
+    ?.filter((h: Hearing) => new Date(h.hearing_date) >= new Date())
+    .sort((a: Hearing, b: Hearing) => new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime())
     .slice(0, 5);
 
   const pendingTasksList = tasks
@@ -171,7 +171,7 @@ const Index = () => {
                 {isLoading ? (
                     <TableRow><TableCell colSpan={3} className="text-center">جاري التحميل...</TableCell></TableRow>
                 ) : upcomingHearingsList && upcomingHearingsList.length > 0 ? (
-                  upcomingHearingsList.map(hearing => (
+                  upcomingHearingsList.map((hearing: Hearing) => (
                     <TableRow key={hearing.id}>
                       <TableCell>{format(new Date(hearing.hearing_date), "yyyy/MM/dd", { locale: ar })}</TableCell>
                       <TableCell>

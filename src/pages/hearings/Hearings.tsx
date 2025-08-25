@@ -23,6 +23,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { showSuccess, showError } from "@/utils/toast";
+import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type HearingData = {
   id: string;
@@ -43,10 +51,15 @@ const Hearings = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingHearingId, setDeletingHearingId] = useState<string | null>(null);
   
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [typeFilter, setTypeFilter] = useState<'all' | 'first' | 'adjournment'>('all');
+
   const queryClient = useQueryClient();
   const { data: hearings, isLoading, isError } = useQuery<HearingData[]>({
-    queryKey: ["hearings"],
-    queryFn: getHearings,
+    queryKey: ["hearings", { searchTerm, dateFrom, dateTo, type: typeFilter }],
+    queryFn: () => getHearings({ searchTerm, dateFrom, dateTo, type: typeFilter }),
   });
 
   const deleteMutation = useMutation({
@@ -83,6 +96,13 @@ const Hearings = () => {
     }
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setTypeFilter("all");
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -97,6 +117,46 @@ const Hearings = () => {
           إضافة جلسة
         </Button>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>تصفية الجلسات</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Input
+            placeholder="ابحث برقم القضية أو اسم الموكل..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
+            <SelectTrigger><SelectValue placeholder="نوع الجلسة" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="first">الجلسة الأولى</SelectItem>
+              <SelectItem value="adjournment">تأجيل</SelectItem>
+            </SelectContent>
+          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "PPP") : <span>من تاريخ</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} /></PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "PPP") : <span>إلى تاريخ</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateTo} onSelect={setDateTo} /></PopoverContent>
+          </Popover>
+          <Button onClick={clearFilters} variant="outline" className="lg:col-span-4">مسح الفلاتر</Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -124,8 +184,7 @@ const Hearings = () => {
                     <TableHead className="text-right">تاريخ الجلسة</TableHead>
                     <TableHead className="text-right">رقم القضية</TableHead>
                     <TableHead className="text-right">الموكل</TableHead>
-                    <TableHead className="text-right">القاعة</TableHead>
-                    <TableHead className="text-right">طبيعة الإجراء</TableHead>
+                    <TableHead className="text-right">النوع</TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -134,10 +193,23 @@ const Hearings = () => {
                     hearings.map((hearing) => (
                       <TableRow key={hearing.id}>
                         <TableCell className="text-right">{format(new Date(hearing.hearing_date), "PPP")}</TableCell>
-                        <TableCell className="font-medium text-right">{hearing.case_number || "-"}</TableCell>
+                        <TableCell className="font-medium text-right">
+                          {hearing.case_id ? (
+                            <Link to={`/cases/${hearing.case_id}`} className="text-primary hover:underline">
+                              {hearing.case_number || "-"}
+                            </Link>
+                          ) : (
+                            hearing.case_number || "-"
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">{hearing.client_name || "-"}</TableCell>
-                        <TableCell className="text-right">{hearing.room || "-"}</TableCell>
-                        <TableCell className="text-right">{hearing.result || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          {hearing.notes === 'الجلسة الأولى (آلي)' ? (
+                            <Badge variant="default">الجلسة الأولى</Badge>
+                          ) : (
+                            <Badge variant="secondary">تأجيل</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center space-x-2 space-x-reverse justify-end">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(hearing)}>
@@ -152,7 +224,7 @@ const Hearings = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={5} className="text-center">
                         لا يوجد جلسات لعرضها.
                       </TableCell>
                     </TableRow>
