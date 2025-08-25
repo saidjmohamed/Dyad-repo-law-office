@@ -60,14 +60,14 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       fees_notes: initialData?.fees_notes || null,
 
       internal_notes: initialData?.internal_notes || null,
-      public_summary: initialData?.public_summary || null,
-
+      public_summary: initialData?.public_summary || "", // FIX 1: Changed from null to "" to match Zod schema
+      
       created_by: initialData?.created_by || null,
       created_at: initialData?.created_at ? new Date(initialData.created_at) : new Date(),
       last_modified_by: initialData?.last_modified_by || null,
       updated_at: initialData?.updated_at ? new Date(initialData.updated_at) : undefined,
       access_control: initialData?.access_control || [],
-      client_id: initialData?.client_id || null,
+      client_id: initialData?.client_id || "", // FIX 2: Changed from null to "" to match Zod schema
     },
   });
 

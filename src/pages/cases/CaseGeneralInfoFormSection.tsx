@@ -146,16 +146,15 @@ export const CaseGeneralInfoFormSection = ({ clients }: CaseGeneralInfoFormSecti
             <FormItem>
               <FormLabel>الموكل</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                value={field.value ?? "none"}
+                onValueChange={field.onChange}
+                value={field.value ?? ""} // Ensure value is a string for Select
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر موكلاً (اختياري)" />
+                    <SelectValue placeholder="اختر موكلاً" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="none">لا يوجد موكل</SelectItem>
                   {clients?.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.full_name}

@@ -62,7 +62,7 @@ export const caseFormSchema = z.object({
 
   // Notes
   internal_notes: z.string().optional().nullable(),
-  public_summary: z.string().max(1000, "الملخص العام لا يمكن أن يتجاوز 1000 حرفًا").optional().nullable(),
+  public_summary: z.string().min(1, "اسم/وصف القضية مطلوب").max(1000, "الملخص العام لا يمكن أن يتجاوز 1000 حرفًا"), // Made required
 
   // Audit/Access Control (will be set by backend or pre-filled)
   created_by: z.string().uuid().optional().nullable(),
@@ -72,7 +72,7 @@ export const caseFormSchema = z.object({
   access_control: z.array(z.string()).optional().nullable(),
 
   // Client ID for linking
-  client_id: z.string().uuid().optional().nullable(), // Added client_id to schema
+  client_id: z.string().uuid("يجب اختيار موكل صحيح").min(1, "الموكل مطلوب"), // Made required
 });
 
 export type CaseFormValues = z.infer<typeof caseFormSchema>;
