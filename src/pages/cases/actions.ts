@@ -249,6 +249,18 @@ export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
   ];
   await manageCaseParties(data.id, user.id, allParties);
 
+  // If first_hearing_date is provided, create the first hearing automatically
+  if (coreCaseData.first_hearing_date) {
+    await createHearing({
+      case_id: data.id,
+      hearing_date: coreCaseData.first_hearing_date,
+      room: undefined,
+      judge: undefined,
+      result: undefined,
+      notes: "الجلسة الأولى (آلي)", // Special note to identify this hearing
+    });
+  }
+
   // If next_hearing_date is provided, create a corresponding hearing entry
   if (coreCaseData.next_hearing_date) {
     await createHearing({
@@ -306,13 +318,30 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
     throw new Error("فشل تحديث القضية.");
   }
 
-  // Update parties if provided
-  const allParties = [
-    ...(plaintiffs || []).map(p => ({ ...p, party_type: 'plaintiff' as const })),
-    ...(defendants || []).map(p => ({ ...p, party_type: 'defendant' as const })),
-    ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
-  ];
-  await manageCaseParties(id, user.id, allParties);
+  // --- Manage automatic first hearing ---
+  const { data: existingHearings } = await supabase.from('hearings').select('id, notes, hearing_date').eq('case_id', id);
+  const autoFirstHearing = existingHearings?.find(h => h.notes === 'الجلسة الأولى (آلي)');
+  const newFirstHearingDate = coreCaseData.first_hearing_date;
+
+  if (autoFirstHearing) {
+    if (newFirstHearingDate) {
+      // Date has changed, so update it
+      if (new Date(newFirstHearingDate).toISOString().split('T')[0] !== new Date(autoFirstHearing.hearing_date).toISOString().split('T')[0]) {
+        await supabase.from('hearings').update({ hearing_date: newFirstHearingDate.toISOString() }).eq('id', autoFirstHearing.id);
+      }
+    } else {
+      // Date was removed, so delete the hearing
+      await supabase.from('hearings').delete().eq('id', autoFirstHearing.id);
+    }
+  } else if (newFirstHearingDate) {
+    // No automatic first hearing exists, but a date is now provided, so create one
+    await createHearing({
+      case_id: id,
+      hearing_date: newFirstHearingDate,
+      notes: "الجلسة الأولى (آلي)",
+      room: undefined, judge: undefined, result: undefined,
+    });
+  }
 
   // If next_hearing_date is provided and it's different from the old one, create a new hearing entry
   const oldNextHearingDateISO = oldCase?.next_hearing_date;
@@ -328,6 +357,14 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
       notes: "تم تحديثها من تفاصيل القضية",
     });
   }
+
+  // Update parties if provided
+  const allParties = [
+    ...(plaintiffs || []).map(p => ({ ...p, party_type: 'plaintiff' as const })),
+    ...(defendants || []).map(p => ({ ...p, party_type: 'defendant' as const })),
+    ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
+  ];
+  await manageCaseParties(id, user.id, allParties);
 
   return data;
 };
