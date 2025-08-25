@@ -254,9 +254,9 @@ export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
     await createHearing({
       case_id: data.id,
       hearing_date: coreCaseData.next_hearing_date,
-      room: null,
-      judge: null,
-      result: null,
+      room: undefined, // Changed from null to undefined
+      judge: undefined, // Changed from null to undefined
+      result: undefined, // Changed from null to undefined
       notes: "تم تحديدها من تفاصيل القضية",
     });
   }
@@ -322,9 +322,9 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
     await createHearing({
       case_id: data.id,
       hearing_date: coreCaseData.next_hearing_date,
-      room: null,
-      judge: null,
-      result: null,
+      room: undefined, // Changed from null to undefined
+      judge: undefined, // Changed from null to undefined
+      result: undefined, // Changed from null to undefined
       notes: "تم تحديثها من تفاصيل القضية",
     });
   }
