@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
+import frLocale from '@fullcalendar/core/locales/fr'; // Import French locale
 
 type Hearing = {
   case_number?: string;
@@ -101,8 +102,8 @@ const CalendarPage = () => {
                         center: '',
                         end: 'today prev,next'
                     }}
-                    locale="ar"
-                    direction="rtl"
+                    locale={frLocale} // Set locale to French
+                    // Removed direction="rtl" as French is LTR
                     height="auto"
                     eventTimeFormat={{
                         hour: 'numeric',
