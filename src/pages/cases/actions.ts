@@ -45,7 +45,7 @@ export interface Case {
   created_by?: string | null;
   created_at: string;
   last_modified_by?: string | null;
-  last_modified_at?: string | null;
+  updated_at?: string | null;
   access_control?: string[] | null;
 
   user_id: string; // Owner of the case
@@ -224,7 +224,7 @@ export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
     last_postponement_date: coreCaseData.last_postponement_date ? coreCaseData.last_postponement_date.toISOString() : null,
     next_hearing_date: coreCaseData.next_hearing_date ? coreCaseData.next_hearing_date.toISOString() : null,
     created_at: new Date().toISOString(), // Always set created_at on creation
-    last_modified_at: null, // Not modified yet
+    updated_at: null, // Not modified yet
     user_id: user.id,
     created_by: user.id,
   };
@@ -265,7 +265,7 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
     first_hearing_date: coreCaseData.first_hearing_date ? coreCaseData.first_hearing_date.toISOString() : null,
     last_postponement_date: coreCaseData.last_postponement_date ? coreCaseData.last_postponement_date.toISOString() : null,
     next_hearing_date: coreCaseData.next_hearing_date ? coreCaseData.next_hearing_date.toISOString() : null,
-    last_modified_at: new Date().toISOString(), // Always set last_modified_at on update
+    updated_at: new Date().toISOString(), // Always set updated_at on update
     last_modified_by: user.id,
   };
 

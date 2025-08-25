@@ -68,7 +68,7 @@ export const caseFormSchema = z.object({
   created_by: z.string().uuid().optional().nullable(),
   created_at: z.date().optional().nullable(),
   last_modified_by: z.string().uuid().optional().nullable(),
-  last_modified_at: z.date().optional().nullable(),
+  updated_at: z.date().optional().nullable(),
   access_control: z.array(z.string()).optional().nullable(),
 
   // Client ID for linking

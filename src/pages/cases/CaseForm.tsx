@@ -65,7 +65,7 @@ export const CaseForm = ({ initialData, onSubmit, isLoading, clients }: CaseForm
       created_by: initialData?.created_by || null,
       created_at: initialData?.created_at ? new Date(initialData.created_at) : new Date(),
       last_modified_by: initialData?.last_modified_by || null,
-      last_modified_at: initialData?.last_modified_at ? new Date(initialData.last_modified_at) : undefined,
+      updated_at: initialData?.updated_at ? new Date(initialData.updated_at) : undefined,
       access_control: initialData?.access_control || [],
       client_id: initialData?.client_id || null,
     },
