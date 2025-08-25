@@ -51,6 +51,7 @@ export interface Case {
 
   user_id: string; // Owner of the case
   status?: string | null; // Added status property
+  archived: boolean; // Added archived property
 
   // Relations (for fetching, not direct storage in 'cases' table)
   client_id?: string | null; // Still linking to clients table
@@ -99,6 +100,7 @@ interface GetCasesFilters {
   filterRegisteredAtFrom?: string;
   filterRegisteredAtTo?: string;
   filterClientId?: string;
+  includeArchived?: boolean;
 }
 
 export const getCases = async (filters?: GetCasesFilters): Promise<Case[]> => {
@@ -108,6 +110,12 @@ export const getCases = async (filters?: GetCasesFilters): Promise<Case[]> => {
       *,
       clients (full_name)
     `);
+
+  if (!filters?.includeArchived) {
+    query = query.eq('archived', false);
+  } else {
+    query = query.eq('archived', true);
+  }
 
   if (filters?.searchTerm) {
     query = query.ilike('case_number', `%${filters.searchTerm}%`); // Example, adjust as needed for full-text search
@@ -378,4 +386,19 @@ export const deleteCase = async (id: string) => {
   }
 
   return true;
+};
+
+export const toggleCaseArchiveStatus = async ({ id, archived }: { id:string, archived: boolean }) => {
+  const { data, error } = await supabase
+    .from('cases')
+    .update({ archived, status: archived ? 'مؤرشفة' : 'جديدة' })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error toggling case archive status:', error);
+    throw new Error('لا يمكن تحديث حالة أرشفة القضية.');
+  }
+  return data;
 };

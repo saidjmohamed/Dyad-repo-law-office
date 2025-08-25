@@ -19,14 +19,21 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { getProfile } from "@/pages/settings/actions"; // استيراد دالة جلب الملف الشخصي
+import { getProfile } from "@/pages/settings/actions";
+
+type Profile = {
+  first_name?: string | null;
+  last_name?: string | null;
+  avatar_url?: string | null;
+  role?: string | null;
+};
 
 const MainLayout = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
-  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+  const { data: profile, isLoading: isLoadingProfile } = useQuery<Profile | null>({
     queryKey: ["profile"],
     queryFn: getProfile,
   });
@@ -56,7 +63,7 @@ const MainLayout = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [profile, navigate]); // إضافة profile كاعتمادية
+  }, [profile, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -76,7 +83,7 @@ const MainLayout = () => {
         <div className="flex items-center h-16 px-6 border-b dark:border-gray-800">
           <h1 className="text-lg font-semibold">مكتب الأستاذ سايج محمد</h1>
         </div>
-        <SidebarNav />
+        <SidebarNav userRole={profile?.role} />
       </aside>
 
       <div className="flex flex-col flex-1">
@@ -93,7 +100,7 @@ const MainLayout = () => {
                 <div className="flex items-center h-16 px-6 border-b dark:border-gray-800">
                     <h1 className="text-lg font-semibold">القائمة</h1>
                 </div>
-                <SidebarNav onLinkClick={() => setMobileMenuOpen(false)} />
+                <SidebarNav onLinkClick={() => setMobileMenuOpen(false)} userRole={profile?.role} />
             </SheetContent>
           </Sheet>
           

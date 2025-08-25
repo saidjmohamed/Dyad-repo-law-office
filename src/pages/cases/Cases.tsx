@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCases, deleteCase, Case } from "./actions";
+import { getCases, deleteCase, Case, toggleCaseArchiveStatus } from "./actions";
 import { getClients } from "../clients/actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2, Eye } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Eye, Archive, ArchiveRestore } from "lucide-react";
 import { CaseSheet } from "./CaseSheet";
 import {
   Card,
@@ -30,7 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { caseCategoryOptions, procedureTypeOptions, feesStatusOptions } from "@/data/caseOptions"; // Removed jurisdictionSectionOptions
+import { caseCategoryOptions, procedureTypeOptions, feesStatusOptions } from "@/data/caseOptions";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 type CaseData = Case;
 
@@ -48,11 +50,12 @@ const Cases = () => {
   const [filterRegisteredAtFrom, setFilterRegisteredAtFrom] = useState<Date | undefined>(undefined);
   const [filterRegisteredAtTo, setFilterRegisteredAtTo] = useState<Date | undefined>(undefined);
   const [filterClientId, setFilterClientId] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
 
   const queryClient = useQueryClient();
 
   const { data: cases, isLoading, isError } = useQuery<CaseData[]>({
-    queryKey: ["cases", searchTerm, filterCaseCategory, filterProcedureType, filterCourtName, filterStatus, filterRegisteredAtFrom, filterRegisteredAtTo, filterClientId],
+    queryKey: ["cases", searchTerm, filterCaseCategory, filterProcedureType, filterCourtName, filterStatus, filterRegisteredAtFrom, filterRegisteredAtTo, filterClientId, showArchived],
     queryFn: () => getCases({
       searchTerm,
       filterCaseCategory,
@@ -61,6 +64,7 @@ const Cases = () => {
       filterRegisteredAtFrom: filterRegisteredAtFrom?.toISOString(),
       filterRegisteredAtTo: filterRegisteredAtTo?.toISOString(),
       filterClientId,
+      includeArchived: showArchived,
     }),
   });
 
@@ -76,6 +80,17 @@ const Cases = () => {
       showSuccess("تم حذف القضية بنجاح.");
       setIsDeleteDialogOpen(false);
       setDeletingCaseId(null);
+    },
+    onError: (error) => {
+      showError(error.message);
+    },
+  });
+
+  const toggleArchiveMutation = useMutation({
+    mutationFn: toggleCaseArchiveStatus,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      showSuccess(data.archived ? "تم أرشفة القضية بنجاح." : "تم استعادة القضية بنجاح.");
     },
     onError: (error) => {
       showError(error.message);
@@ -103,6 +118,10 @@ const Cases = () => {
     }
   };
 
+  const handleToggleArchive = (id: string, archived: boolean) => {
+    toggleArchiveMutation.mutate({ id, archived });
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setFilterCaseCategory("");
@@ -112,6 +131,7 @@ const Cases = () => {
     setFilterRegisteredAtFrom(undefined);
     setFilterRegisteredAtTo(undefined);
     setFilterClientId("");
+    setShowArchived(false);
   };
 
   return (
@@ -191,7 +211,11 @@ const Cases = () => {
                 <Calendar mode="single" selected={filterRegisteredAtTo} onSelect={setFilterRegisteredAtTo} initialFocus />
               </PopoverContent>
             </Popover>
-            <Button onClick={clearFilters} variant="outline">مسح الفلاتر</Button>
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch id="archived-switch" checked={showArchived} onCheckedChange={setShowArchived} />
+              <Label htmlFor="archived-switch">إظهار المؤرشفة</Label>
+            </div>
+            <Button onClick={clearFilters} variant="outline" className="lg:col-start-4">مسح الفلاتر</Button>
           </div>
         </CardContent>
       </Card>
@@ -249,6 +273,9 @@ const Cases = () => {
                             </Link>
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
                               <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleToggleArchive(caseItem.id, !caseItem.archived)}>
+                              {caseItem.archived ? <ArchiveRestore className="w-4 h-4 text-green-500" /> : <Archive className="w-4 h-4" />}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
                               <Trash2 className="w-4 h-4 text-red-500" />

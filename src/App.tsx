@@ -15,6 +15,7 @@ import Hearings from "./pages/hearings/Hearings";
 import Tasks from "./pages/tasks/Tasks";
 import CalendarPage from "./pages/calendar/CalendarPage";
 import Settings from "./pages/settings/Settings";
+import Users from "./pages/users/Users";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/users" element={<Users />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

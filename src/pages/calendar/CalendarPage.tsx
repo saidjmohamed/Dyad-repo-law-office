@@ -7,7 +7,6 @@ import { getTasks } from '../tasks/actions';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import arLocale from '@fullcalendar/core/locales/ar';
 import { Card, CardContent } from '@/components/ui/card';
 
 type Hearing = {
@@ -102,7 +101,7 @@ const CalendarPage = () => {
                         center: '',
                         end: 'today prev,next'
                     }}
-                    locale={arLocale}
+                    locale="ar"
                     direction="rtl"
                     height="auto"
                     eventTimeFormat={{
