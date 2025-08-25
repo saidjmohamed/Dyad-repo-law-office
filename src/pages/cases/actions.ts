@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CaseFormValues, PartyFormValues } from "./caseSchema"; // Import PartyFormValues
+import { createHearing } from "../hearings/actions"; // Import createHearing from hearings actions
 
 export interface Case {
   id: string;
@@ -248,6 +249,18 @@ export const createCase = async (caseData: CaseFormValues): Promise<Case> => {
   ];
   await manageCaseParties(data.id, user.id, allParties);
 
+  // If next_hearing_date is provided, create a corresponding hearing entry
+  if (coreCaseData.next_hearing_date) {
+    await createHearing({
+      case_id: data.id,
+      hearing_date: coreCaseData.next_hearing_date,
+      room: null,
+      judge: null,
+      result: null,
+      notes: "تم تحديدها من تفاصيل القضية",
+    });
+  }
+
   return data;
 };
 
@@ -256,6 +269,18 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
   if (!user) throw new Error("المستخدم غير مسجل الدخول.");
 
   const { plaintiffs, defendants, other_parties, ...coreCaseData } = caseData;
+
+  // Fetch the existing case to compare next_hearing_date
+  const { data: oldCase, error: fetchError } = await supabase
+    .from("cases")
+    .select('next_hearing_date')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching old case data for comparison:", fetchError);
+    // Continue with update, but skip hearing creation/update logic
+  }
 
   // Convert Date objects to ISO strings for Supabase update
   const dataToUpdate = {
@@ -288,6 +313,21 @@ export const updateCase = async ({ id, ...caseData }: { id: string } & CaseFormV
     ...(other_parties || []).map(p => ({ ...p, party_type: 'other' as const })),
   ];
   await manageCaseParties(id, user.id, allParties);
+
+  // If next_hearing_date is provided and it's different from the old one, create a new hearing entry
+  const oldNextHearingDateISO = oldCase?.next_hearing_date;
+  const newNextHearingDateISO = coreCaseData.next_hearing_date?.toISOString();
+
+  if (coreCaseData.next_hearing_date && newNextHearingDateISO !== oldNextHearingDateISO) {
+    await createHearing({
+      case_id: data.id,
+      hearing_date: coreCaseData.next_hearing_date,
+      room: null,
+      judge: null,
+      result: null,
+      notes: "تم تحديثها من تفاصيل القضية",
+    });
+  }
 
   return data;
 };
