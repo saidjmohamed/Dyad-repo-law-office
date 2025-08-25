@@ -1,17 +1,8 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCases, deleteCase, Case, toggleCaseArchiveStatus } from "./actions";
-import { getClients } from "../clients/actions";
+import { useQuery } from "@tanstack/react-query";
+import { PlusCircle, Search, Edit, Trash2, Archive, Unarchive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2, Eye, Archive, ArchiveRestore } from "lucide-react";
-import { CaseSheet } from "./CaseSheet";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -20,296 +11,303 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { getCases, deleteCase, updateCase } from "./actions";
+import CaseSheet from "./CaseSheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import { showSuccess, showError } from "@/utils/toast";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { caseCategoryOptions, procedureTypeOptions, feesStatusOptions } from "@/data/caseOptions";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { getClients } from "../clients/actions";
+import { Client } from "../clients/ClientList"; // Import Client type
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type CaseData = Case;
+export type Case = {
+  id: string;
+  case_number: string;
+  status: string;
+  client_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  user_id: string;
+  case_category: string;
+  procedure_type: string;
+  registered_at: string;
+  court_name: string | null;
+  province: string | null;
+  jurisdiction_section: string | null;
+  appeal_to_court: string | null;
+  supreme_court_chamber: string | null;
+  first_hearing_date: string | null;
+  last_postponement_date: string | null;
+  postponement_reason: string | null;
+  next_hearing_date: string | null;
+  judgment_text: string | null;
+  statute_of_limitations: string | null;
+  fees_amount: number | null;
+  fees_status: string | null;
+  fees_notes: string | null;
+  internal_notes: string | null;
+  public_summary: string | null;
+  criminal_offense_type: string | null;
+  complaint_filed_with: string | null;
+  investigation_number: string | null;
+  original_case_number: string | null;
+  original_judgment_date: string | null;
+  appellant_or_opponent: string | null;
+  grounds_of_appeal: string | null;
+  archived: boolean;
+};
 
 const Cases = () => {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingCase, setEditingCase] = useState<CaseData | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
-  
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCaseCategory, setFilterCaseCategory] = useState("");
-  const [filterProcedureType, setFilterProcedureType] = useState("");
-  const [filterCourtName, setFilterCourtName] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterRegisteredAtFrom, setFilterRegisteredAtFrom] = useState<Date | undefined>(undefined);
-  const [filterRegisteredAtTo, setFilterRegisteredAtTo] = useState<Date | undefined>(undefined);
-  const [filterClientId, setFilterClientId] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingCase, setEditingCase] = useState<Case | undefined>(undefined);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterClientId, setFilterClientId] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  const queryClient = useQueryClient();
-
-  const { data: cases, isLoading, isError } = useQuery<CaseData[]>({
-    queryKey: ["cases", searchTerm, filterCaseCategory, filterProcedureType, filterCourtName, filterStatus, filterRegisteredAtFrom, filterRegisteredAtTo, filterClientId, showArchived],
-    queryFn: () => getCases({
-      searchTerm,
-      filterCaseCategory,
-      filterCourtName,
-      filterStatus,
-      filterRegisteredAtFrom: filterRegisteredAtFrom?.toISOString(),
-      filterRegisteredAtTo: filterRegisteredAtTo?.toISOString(),
-      filterClientId,
-      includeArchived: showArchived,
-    }),
+  const { data: clients, isLoading: isLoadingClients } = useQuery<Client[]>({
+    queryKey: ["clients"],
+    queryFn: () => getClients({}), // Corrected queryFn call
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ["clients"],
-    queryFn: getClients,
+  const { data: cases, isLoading } = useQuery<Case[]>({
+    queryKey: ["cases", searchTerm, filterStatus, filterClientId, showArchived],
+    queryFn: () => getCases({
+      query: searchTerm,
+      status: filterStatus === "all" ? undefined : filterStatus,
+      clientId: filterClientId === "all" ? undefined : filterClientId,
+      archived: showArchived,
+    }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteCase,
     onSuccess: () => {
+      toast.success("تم حذف القضية بنجاح.");
       queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess("تم حذف القضية بنجاح.");
       setIsDeleteDialogOpen(false);
-      setDeletingCaseId(null);
     },
     onError: (error) => {
-      showError(error.message);
+      toast.error(`فشل حذف القضية: ${error.message}`);
     },
   });
 
-  const toggleArchiveMutation = useMutation({
-    mutationFn: toggleCaseArchiveStatus,
-    onSuccess: (data) => {
+  const updateMutation = useMutation({
+    mutationFn: updateCase,
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
-      showSuccess(data.archived ? "تم أرشفة القضية بنجاح." : "تم استعادة القضية بنجاح.");
     },
     onError: (error) => {
-      showError(error.message);
+      toast.error(`فشل تحديث القضية: ${error.message}`);
     },
   });
 
-  const handleAddClick = () => {
-    setEditingCase(null);
+  const queryClient = useQueryClient();
+
+  const handleAddCase = () => {
+    setEditingCase(undefined);
     setIsSheetOpen(true);
   };
 
-  const handleEditClick = (caseData: CaseData) => {
-    setEditingCase(caseData);
+  const handleEditCase = (caseItem: Case) => {
+    setEditingCase(caseItem);
     setIsSheetOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    setDeletingCaseId(id);
+  const handleDeleteCase = (id: string) => {
+    setCaseToDelete(id);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
-    if (deletingCaseId) {
-      deleteMutation.mutate(deletingCaseId);
+    if (caseToDelete) {
+      deleteMutation.mutate(caseToDelete);
     }
   };
 
-  const handleToggleArchive = (id: string, archived: boolean) => {
-    toggleArchiveMutation.mutate({ id, archived });
+  const handleArchiveToggle = (caseItem: Case) => {
+    updateMutation.mutate({ id: caseItem.id, archived: !caseItem.archived });
+    toast.success(`تم ${caseItem.archived ? "إلغاء أرشفة" : "أرشفة"} القضية بنجاح.`);
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setFilterCaseCategory("");
-    setFilterProcedureType("");
-    setFilterCourtName("");
-    setFilterStatus("");
-    setFilterRegisteredAtFrom(undefined);
-    setFilterRegisteredAtTo(undefined);
-    setFilterClientId("");
-    setShowArchived(false);
+  const getClientName = (clientId: string | null) => {
+    return clients?.find((client) => client.id === clientId)?.full_name || "غير محدد";
   };
 
   return (
-    <>
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">إدارة القضايا</h1>
+          <h1 className="text-3xl font-bold">القضايا</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            عرض، إضافة، وتعديل بيانات القضايا.
+            إدارة جميع القضايا الخاصة بك.
           </p>
         </div>
-        <Button onClick={handleAddClick}>
-          <PlusCircle className="w-4 h-4 ml-2" />
-          إضافة قضية
+        <Button onClick={handleAddCase}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          إضافة قضية جديدة
         </Button>
       </div>
 
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>تصفية القضايا</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Input
-              placeholder="ابحث برقم القضية، الموكل..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Select value={filterCaseCategory} onValueChange={setFilterCaseCategory}>
-              <SelectTrigger><SelectValue placeholder="نوع القضية" /></SelectTrigger>
-              <SelectContent>
-                {caseCategoryOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterProcedureType} onValueChange={setFilterProcedureType}>
-              <SelectTrigger><SelectValue placeholder="نوع الإجراء" /></SelectTrigger>
-              <SelectContent>
-                {procedureTypeOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="اسم المحكمة/المجلس"
-              value={filterCourtName}
-              onChange={(e) => setFilterCourtName(e.target.value)}
-            />
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="البحث عن قضية..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="حالة القضية" /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="تصفية حسب الحالة" />
+              </SelectTrigger>
               <SelectContent>
-                {feesStatusOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                <SelectItem value="جديدة">جديدة</SelectItem>
+                <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
+                <SelectItem value="مكتملة">مكتملة</SelectItem>
+                <SelectItem value="مؤجلة">مؤجلة</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterClientId} onValueChange={setFilterClientId}>
-              <SelectTrigger><SelectValue placeholder="الموكل" /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="تصفية حسب الموكل" />
+              </SelectTrigger>
               <SelectContent>
-                {clients?.map(client => <SelectItem key={client.id} value={client.id}>{client.full_name}</SelectItem>)}
+                <SelectItem value="all">جميع الموكلين</SelectItem>
+                {clients?.map((client: Client) => ( // Added null check and explicit type
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.full_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterRegisteredAtFrom ? format(filterRegisteredAtFrom, "PPP") : <span>تاريخ التسجيل (من)</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterRegisteredAtFrom} onSelect={setFilterRegisteredAtFrom} initialFocus />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterRegisteredAtTo ? format(filterRegisteredAtTo, "PPP") : <span>تاريخ التسجيل (إلى)</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={filterRegisteredAtTo} onSelect={setFilterRegisteredAtTo} initialFocus />
-              </PopoverContent>
-            </Popover>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch id="archived-switch" checked={showArchived} onCheckedChange={setShowArchived} />
-              <Label htmlFor="archived-switch">إظهار المؤرشفة</Label>
-            </div>
-            <Button onClick={clearFilters} variant="outline" className="lg:col-start-4">مسح الفلاتر</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowArchived(!showArchived)}
+              className="w-[180px]"
+            >
+              {showArchived ? "إخفاء الأرشيف" : "عرض الأرشيف"}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>قائمة القضايا</CardTitle>
-          <CardDescription>
-            هنا قائمة بجميع القضايا المسجلة في النظام.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           {isLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
-            </div>
-          ) : isError ? (
-            <div className="text-red-500 text-center py-4">
-              حدث خطأ أثناء جلب البيانات.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">رقم القضية</TableHead>
-                    <TableHead className="text-right">الموكل</TableHead>
-                    <TableHead className="text-right">نوع القضية</TableHead>
-                    <TableHead className="text-right">نوع الإجراء</TableHead>
-                    <TableHead className="text-right">تاريخ التسجيل</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cases && cases.length > 0 ? (
-                    cases.map((caseItem: CaseData) => (
-                      <TableRow key={caseItem.id}>
-                        <TableCell className="font-medium text-right">{caseItem.case_number || "-"}</TableCell>
-                        <TableCell className="text-right">{caseItem.client_name || "-"}</TableCell>
-                        <TableCell className="text-right">{caseItem.case_category}</TableCell>
-                        <TableCell className="text-right">{caseItem.procedure_type}</TableCell>
-                        <TableCell className="text-right">
-                          {caseItem.registered_at ? format(new Date(caseItem.registered_at), "PPP") : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">{caseItem.status || "جديدة"}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center space-x-2 space-x-reverse justify-end">
-                            <Link to={`/cases/${caseItem.id}`}>
-                              <Button variant="ghost" size="icon">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </Link>
-                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(caseItem)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleToggleArchive(caseItem.id, !caseItem.archived)}>
-                              {caseItem.archived ? <ArchiveRestore className="w-4 h-4 text-green-500" /> : <Archive className="w-4 h-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(caseItem.id)}>
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">
-                        لا يوجد قضايا لعرضها.
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>رقم القضية</TableHead>
+                  <TableHead>الموكل</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>تاريخ التسجيل</TableHead>
+                  <TableHead className="text-right">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cases?.length > 0 ? (
+                  cases.map((caseItem) => (
+                    <TableRow key={caseItem.id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/cases/${caseItem.id}`} className="text-blue-500 hover:underline">
+                          {caseItem.case_number}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{getClientName(caseItem.client_id)}</TableCell>
+                      <TableCell>{caseItem.status}</TableCell>
+                      <TableCell>{new Date(caseItem.registered_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditCase(caseItem)}
+                          className="ml-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleArchiveToggle(caseItem)}
+                          className="ml-2"
+                        >
+                          {caseItem.archived ? <Unarchive className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteCase(caseItem.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      لا توجد قضايا.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
-      <CaseSheet 
-        open={isSheetOpen} 
+      <CaseSheet
+        open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         caseData={editingCase}
       />
-      <DeleteConfirmationDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={confirmDelete}
-        isPending={deleteMutation.isPending}
-      />
-    </>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيؤدي هذا الإجراء إلى حذف القضية بشكل دائم من سجلاتك.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

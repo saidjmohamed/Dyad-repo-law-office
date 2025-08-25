@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { PlusCircle, Search } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PlusCircle, Search, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,31 +23,74 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { getClients, deleteClient } from "./actions";
-import ClientSheet from "./ClientSheet"; // Corrected import
+import ClientSheet from "./ClientSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Client } from "./ClientList"; // Import Client type
 
-const Clients = () => {
+// Update the Client type definition
+export type Client = {
+  id: string;
+  full_name: string;
+  national_id: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  user_id: string;
+  date_of_birth: string | Date | null; // Changed to allow Date object for editing
+  father_name: string | null;
+  profession: string | null;
+};
+
+const ClientList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["clients", searchTerm],
-    queryFn: ({ queryKey }) => getClients({ query: queryKey[1] as string }), // Corrected queryFn call
+    queryFn: () => getClients({ query: searchTerm }),
   });
 
-  const filteredClients = clients?.filter((client: Client) => // Added null check and explicit type
-    client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.national_id && client.national_id.includes(searchTerm)) ||
-    (client.phone && client.phone.includes(searchTerm)) ||
-    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const deleteMutation = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      toast.success("تم حذف الموكل بنجاح.");
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`فشل حذف الموكل: ${error.message}`);
+    },
+  });
 
-  // ... rest of the component remains the same
+  const handleAddClient = () => {
+    setEditingClient(undefined);
+    setIsSheetOpen(true);
+  };
+
+  const handleEditClient = (client: Client) => {
+    setEditingClient(client);
+    setIsSheetOpen(true);
+  };
+
+  const handleDeleteClient = (id: string) => {
+    setClientToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (clientToDelete) {
+      deleteMutation.mutate(clientToDelete);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -57,7 +100,7 @@ const Clients = () => {
             إدارة قائمة الموكلين لديك.
           </p>
         </div>
-        <Button onClick={() => { setEditingClient(undefined); setIsSheetOpen(true); }}>
+        <Button onClick={handleAddClient}>
           <PlusCircle className="mr-2 h-4 w-4" />
           إضافة موكل جديد
         </Button>
@@ -97,42 +140,31 @@ const Clients = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients && filteredClients.length > 0 ? (
-                  filteredClients.map((client: Client) => ( // Added null check and explicit type
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.full_name}</TableCell>
-                      <TableCell>{client.national_id || "غير متوفر"}</TableCell>
-                      <TableCell>{client.phone || "غير متوفر"}</TableCell>
-                      <TableCell>{client.email || "غير متوفر"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingClient(client)}
-                          className="ml-2"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setClientToDelete(client.id);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      لا يوجد موكلون.
+                {clients?.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.full_name}</TableCell>
+                    <TableCell>{client.national_id || "غير متوفر"}</TableCell>
+                    <TableCell>{client.phone || "غير متوفر"}</TableCell>
+                    <TableCell>{client.email || "غير متوفر"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditClient(client)}
+                        className="ml-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClient(client.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           )}
@@ -155,14 +187,7 @@ const Clients = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (clientToDelete) {
-                deleteClient(clientToDelete);
-                toast.success("تم حذف الموكل بنجاح.");
-                queryClient.invalidateQueries({ queryKey: ["clients"] });
-              }
-              setIsDeleteDialogOpen(false);
-            }}>حذف</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>حذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -170,4 +195,4 @@ const Clients = () => {
   );
 };
 
-export default Clients;
+export default ClientList;
